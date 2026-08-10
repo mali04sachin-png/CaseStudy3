@@ -8,9 +8,14 @@ interviews, and working documents behind it.
 
 ### 📖 Read the case study
 
+**Product & strategy**
 - **[PRD — Solution Space](PRD_Solution_Space.html)** ⭐ — the product itself (Pramaan): concept, personas, flows, MVP, metrics.
 - **[Solution Blueprint](Vendor_Trust_Solution_Blueprint.html)** — the whole idea on one page.
 - **[POC Feature List & ERP Integration Plan](Vendor_Trust_Profile_POC_and_ERP_Integration.html)** — the detailed feature version.
+
+**Engineering**
+- **[Engineering Requirements & ERD](Pramaan_ERD_Engineering_Requirements.html)** — data model, API contracts, business logic, and security.
+- **[Implementation Plan](Pramaan_Implementation_Plan.html)** — the 9-phase, dependency-ordered build sequence.
 
 *(The PRD's Problem Space is still being finalized and will be added here when it's ready.)*
 
