@@ -1,0 +1,1143 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pramaan — Verify once, watch forever</title>
+
+<style>
+  /* ---------- Tokens: light is the base; dark redefines only tokens ---------- */
+  :root {
+    --paper: #ECEFF4;
+    --surface: #ffffff;
+    --surface-2: #f6f8fb;
+    --ink: #142238;
+    --ink-soft: #3c4863;
+    --ink-mute: #59647a;
+    --line: #dde2ea;
+    --accent: #0c6e59;
+    --accent-strong: #095645;
+    --accent-contrast: #ffffff;
+    --seal: #0c6e59;
+    --good: #0c6e59;
+    --warn: #9c5a00;
+    --crit: #a5382c;
+    --shadow: 24px 30px 60px -30px rgba(20, 34, 59, 0.28);
+    --shadow-sm: 0 1px 0 rgba(20, 34, 59, 0.04), 0 12px 24px -18px rgba(20, 34, 59, 0.35);
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0b1422;
+      --surface: #122036;
+      --surface-2: #17273f;
+      --ink: #e9edf4;
+      --ink-soft: #bcc6d6;
+      --ink-mute: #8a97ac;
+      --line: #243650;
+      --accent: #31bf95;
+      --accent-strong: #55d3ae;
+      --accent-contrast: #06251c;
+      --seal: #31bf95;
+      --good: #31bf95;
+      --warn: #e0a64b;
+      --crit: #e1705e;
+      --shadow: 24px 34px 70px -34px rgba(0, 0, 0, 0.65);
+      --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 30px -20px rgba(0, 0, 0, 0.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0b1422;
+    --surface: #122036;
+    --surface-2: #17273f;
+    --ink: #e9edf4;
+    --ink-soft: #bcc6d6;
+    --ink-mute: #8a97ac;
+    --line: #243650;
+    --accent: #31bf95;
+    --accent-strong: #55d3ae;
+    --accent-contrast: #06251c;
+    --seal: #31bf95;
+    --good: #31bf95;
+    --warn: #e0a64b;
+    --crit: #e1705e;
+    --shadow: 24px 34px 70px -34px rgba(0, 0, 0, 0.65);
+    --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 30px -20px rgba(0, 0, 0, 0.7);
+  }
+
+  /* ---------- Base ---------- */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap {
+    width: min(1120px, 100% - 3rem);
+    margin-inline: auto;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    line-height: 1.08;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  p {
+    margin: 0;
+  }
+  a {
+    color: inherit;
+  }
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.9rem;
+  }
+  :focus-visible {
+    outline: 2.5px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  .skip {
+    position: absolute;
+    left: 0.75rem;
+    top: -3rem;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    z-index: 20;
+    transition: top 0.15s ease;
+  }
+  .skip:focus {
+    top: 0.75rem;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.85rem 1.25rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+  .btn-primary:hover {
+    background: var(--accent-strong);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn-ghost:hover {
+    border-color: var(--ink-mute);
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  /* ---------- Header ---------- */
+  header.site {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  header.site .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .brand .deva {
+    font-family: var(--serif);
+    font-size: 1.4rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .brand .name {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: 0.01em;
+  }
+  .brand .tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  nav.top {
+    display: flex;
+    align-items: center;
+    gap: 1.35rem;
+  }
+  nav.top a:not(.btn) {
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+  nav.top a:not(.btn):hover {
+    color: var(--ink);
+  }
+  .nav-links {
+    display: flex;
+    gap: 1.35rem;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero .wrap {
+    display: grid;
+    grid-template-columns: 1.02fr 0.98fr;
+    gap: 3.5rem;
+    align-items: center;
+    padding: clamp(2.5rem, 6vw, 5rem) 0 clamp(2rem, 5vw, 3.5rem);
+  }
+  h1.head {
+    font-size: clamp(2.35rem, 5vw, 3.5rem);
+  }
+  .deck {
+    margin-top: 1.15rem;
+    max-width: 34ch;
+    color: var(--ink-soft);
+    font-size: 1.12rem;
+  }
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 1.7rem;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.1rem;
+    margin: 1.7rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .chips li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--ink-mute);
+  }
+  .chips li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---------- Demo panel ---------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .panel-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px dashed var(--line);
+    background: var(--surface-2);
+  }
+  .panel-top .label {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-weight: 700;
+  }
+  .dot-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    color: var(--ink-mute);
+  }
+  .dot-live::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 60%, transparent);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--good) 55%, transparent);
+    }
+    70% {
+      box-shadow: 0 0 0 9px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+  .panel-body {
+    padding: 1.35rem 1.35rem 1.5rem;
+  }
+
+  form .field {
+    margin-bottom: 0.95rem;
+  }
+  form .row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+  }
+  label.lbl {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 0.35rem;
+  }
+  .req {
+    color: var(--crit);
+  }
+  input,
+  select {
+    width: 100%;
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 0.62rem 0.7rem;
+  }
+  input.mono {
+    font-family: var(--mono);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  input::placeholder {
+    color: var(--ink-mute);
+    opacity: 0.7;
+  }
+  input:focus,
+  select:focus {
+    outline: 2.5px solid var(--accent);
+    outline-offset: 1px;
+    border-color: transparent;
+  }
+  input[aria-invalid="true"],
+  select[aria-invalid="true"] {
+    border-color: var(--crit);
+    background: color-mix(in srgb, var(--crit) 8%, var(--surface));
+  }
+  .hint {
+    font-size: 0.75rem;
+    color: var(--ink-mute);
+    margin-top: 0.3rem;
+    min-height: 1em;
+  }
+  .hint.err {
+    color: var(--crit);
+    font-weight: 600;
+  }
+  .consent {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    margin: 0.4rem 0 1rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+  .consent input {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.15rem;
+    flex: none;
+    accent-color: var(--accent);
+  }
+  form button[type="submit"] {
+    width: 100%;
+    justify-content: center;
+    font-size: 1rem;
+    padding: 0.9rem;
+  }
+
+  /* ---------- Trust passport (revealed) ---------- */
+  .passport {
+    display: none;
+  }
+  .passport.show {
+    display: block;
+  }
+  form.hide {
+    display: none;
+  }
+  .pp-head {
+    display: flex;
+    gap: 1.1rem;
+    align-items: center;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.1rem;
+  }
+  .seal {
+    flex: none;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--accent-contrast);
+    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 78%, white), var(--accent));
+    border: 2px solid color-mix(in srgb, var(--accent) 70%, var(--ink));
+    box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--accent-contrast) 22%, transparent);
+    position: relative;
+  }
+  .seal .tick {
+    font-size: 1.9rem;
+    line-height: 1;
+    font-weight: 700;
+  }
+  .seal .word {
+    position: absolute;
+    bottom: 9px;
+    font-family: var(--mono);
+    font-size: 0.44rem;
+    letter-spacing: 0.14em;
+  }
+  .seal.stamp {
+    animation: stamp 0.5s cubic-bezier(0.2, 1.2, 0.3, 1) both;
+  }
+  @keyframes stamp {
+    0% {
+      opacity: 0;
+      transform: scale(1.7) rotate(-14deg);
+    }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(0);
+    }
+  }
+  .pp-head h3 {
+    font-size: 1.3rem;
+  }
+  .pp-head .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--good);
+    background: color-mix(in srgb, var(--good) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--good) 35%, transparent);
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+  }
+  dl.records {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.55rem 1rem;
+    margin: 0 0 1.2rem;
+  }
+  dl.records dt {
+    font-size: 0.78rem;
+    color: var(--ink-mute);
+    letter-spacing: 0.02em;
+  }
+  dl.records dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    color: var(--ink);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .watch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    padding: 0.7rem 0.8rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+  }
+  .watch .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--good);
+    animation: pulse 2.4s ease-out infinite;
+    flex: none;
+  }
+  .rep-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.78rem;
+    color: var(--ink-mute);
+    margin-bottom: 0.35rem;
+  }
+  .rep-label b {
+    font-family: var(--mono);
+    color: var(--ink);
+    font-size: 0.95rem;
+  }
+  .meter {
+    height: 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 10%, var(--surface-2));
+    overflow: hidden;
+  }
+  .meter > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+    transition: width 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .rep-note {
+    font-size: 0.76rem;
+    color: var(--ink-mute);
+    margin-top: 0.5rem;
+  }
+  .pp-actions {
+    margin-top: 1.2rem;
+  }
+  .pp-actions .btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------- Problem band ---------- */
+  section.band {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  section.band .wrap {
+    padding: clamp(2.5rem, 5vw, 3.75rem) 0;
+  }
+  .band h2 {
+    font-size: clamp(1.7rem, 3.2vw, 2.25rem);
+    max-width: 20ch;
+  }
+  .band .lede {
+    margin-top: 0.9rem;
+    max-width: 58ch;
+    color: var(--ink-soft);
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-top: 2.2rem;
+  }
+  .stat {
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface-2);
+  }
+  .stat .num {
+    font-family: var(--serif);
+    font-size: 2.1rem;
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .cap {
+    margin-top: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- How it works ---------- */
+  section.how .wrap {
+    padding: clamp(2.5rem, 5vw, 4rem) 0;
+  }
+  .section-head {
+    max-width: 52ch;
+    margin-bottom: 2.2rem;
+  }
+  .section-head h2 {
+    font-size: clamp(1.7rem, 3.2vw, 2.25rem);
+  }
+  .section-head p {
+    margin-top: 0.8rem;
+    color: var(--ink-soft);
+  }
+  ol.steps {
+    list-style: none;
+    counter-reset: s;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+  ol.steps li {
+    counter-increment: s;
+    padding: 1.4rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  ol.steps li::before {
+    content: counter(s, decimal-leading-zero);
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 0.7rem;
+  }
+  ol.steps h3 {
+    font-size: 1.15rem;
+    font-family: var(--sans);
+    font-weight: 700;
+  }
+  ol.steps p {
+    margin-top: 0.4rem;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Priya alert preview ---------- */
+  section.priya {
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+  section.priya .wrap {
+    padding: clamp(2.5rem, 5vw, 4rem) 0;
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 3rem;
+    align-items: center;
+  }
+  .alert-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface-2);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  .alert-row {
+    display: grid;
+    grid-template-columns: 6px 1fr auto;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.95rem 1.1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .alert-row:last-child {
+    border-bottom: 0;
+  }
+  .sev {
+    align-self: stretch;
+    border-radius: 3px;
+  }
+  .sev.hi {
+    background: var(--crit);
+  }
+  .sev.md {
+    background: var(--warn);
+  }
+  .alert-row .who {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .alert-row .what {
+    font-size: 0.82rem;
+    color: var(--ink-mute);
+    font-family: var(--mono);
+  }
+  .route {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    border: 1px solid var(--line);
+    padding: 0.28rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ---------- Footer ---------- */
+  footer.site {
+    border-top: 1px solid var(--line);
+  }
+  footer.site .wrap {
+    padding: 2rem 0 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--ink-mute);
+    font-size: 0.85rem;
+  }
+  footer .disc {
+    max-width: 46ch;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px) {
+    .hero .wrap {
+      grid-template-columns: 1fr;
+      gap: 2.25rem;
+    }
+    section.priya .wrap {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .stats,
+    ol.steps {
+      grid-template-columns: 1fr;
+    }
+    .nav-links {
+      display: none;
+    }
+  }
+  @media (max-width: 460px) {
+    form .row2 {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+</style>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Pramaan home">
+      <span class="deva" aria-hidden="true">प्रमाण</span>
+      <span class="name">Pramaan</span>
+      <span class="tag" aria-hidden="true">proof, kept true</span>
+    </a>
+    <nav class="top" aria-label="Primary">
+      <span class="nav-links">
+        <a href="#how">How the watch works</a>
+        <a href="#compliance">For compliance teams</a>
+      </span>
+      <a class="btn btn-ghost" href="#verify">Sign in</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="eyebrow">Continuous vendor trust · India</p>
+        <h1 class="head">Verify a vendor once. Then never stop watching.</h1>
+        <p class="deck">
+          Most tools check a vendor the day you sign them up — and never again. Pramaan
+          verifies against real government records, then keeps re-checking every day, so a
+          lapsed GST or a changed bank account reaches the right person before it costs you.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#verify">Get a vendor verified</a>
+          <a class="btn btn-ghost" href="#how">See how the watch works</a>
+        </div>
+        <ul class="chips" aria-label="Records we verify against">
+          <li>GSTN</li>
+          <li>PAN</li>
+          <li>MSME / Udyam</li>
+          <li>MCA</li>
+        </ul>
+      </div>
+
+      <div class="hero-demo" id="verify">
+        <div class="panel">
+          <div class="panel-top">
+            <span class="label">Vendor Trust Passport</span>
+            <span class="dot-live">live demo</span>
+          </div>
+          <div class="panel-body">
+            <!-- FORM -->
+            <form id="verifyForm" novalidate>
+              <div class="field">
+                <label class="lbl" for="legalName">Legal business name <span class="req" aria-hidden="true">*</span></label>
+                <input id="legalName" name="legalName" type="text" autocomplete="organization"
+                  placeholder="e.g. Ravi Logistics Pvt Ltd" required aria-describedby="legalName-hint" />
+                <p class="hint" id="legalName-hint"></p>
+              </div>
+              <div class="row2">
+                <div class="field">
+                  <label class="lbl" for="gstin">GSTIN <span class="req" aria-hidden="true">*</span></label>
+                  <input id="gstin" name="gstin" class="mono" type="text" inputmode="text"
+                    placeholder="27AAAAA1111A1Z1" maxlength="15" required
+                    aria-describedby="gstin-hint" />
+                  <p class="hint" id="gstin-hint">15 characters</p>
+                </div>
+                <div class="field">
+                  <label class="lbl" for="pan">PAN <span class="req" aria-hidden="true">*</span></label>
+                  <input id="pan" name="pan" class="mono" type="text"
+                    placeholder="AAAAA1111A" maxlength="10" required aria-describedby="pan-hint" />
+                  <p class="hint" id="pan-hint">10 characters</p>
+                </div>
+              </div>
+              <div class="field">
+                <label class="lbl" for="vendorType">Business type</label>
+                <select id="vendorType" name="vendorType">
+                  <option>Proprietorship</option>
+                  <option>Partnership</option>
+                  <option>Private Limited</option>
+                </select>
+              </div>
+              <label class="consent">
+                <input id="consent" type="checkbox" required aria-describedby="consent-hint" />
+                <span>I agree, under the DPDP Act, to Pramaan checking these records once and
+                  re-checking them daily. <span id="consent-hint" class="sr-only">Required to continue.</span></span>
+              </label>
+              <button class="btn btn-primary" type="submit">Verify against government records</button>
+            </form>
+
+            <!-- PASSPORT -->
+            <div class="passport" id="passport" aria-hidden="true">
+              <div class="pp-head">
+                <div class="seal" id="seal" aria-hidden="true">
+                  <span class="tick">✓</span>
+                  <span class="word">VERIFIED</span>
+                </div>
+                <div>
+                  <h3 id="ppName">—</h3>
+                  <span class="status">✓ Active · Government-verified</span>
+                </div>
+              </div>
+              <dl class="records">
+                <dt>GSTIN</dt><dd id="ppGst">—</dd>
+                <dt>PAN</dt><dd id="ppPan">—</dd>
+                <dt>Type</dt><dd id="ppType">—</dd>
+                <dt>Passport ID</dt><dd id="ppId">—</dd>
+              </dl>
+              <div class="watch">
+                <span class="dot" aria-hidden="true"></span>
+                <span>Monitoring on · last checked <span id="ppSince">just now</span> · next check in 24h</span>
+              </div>
+              <div class="rep-label">
+                <span>Reputation</span><b><span id="ppRep">0</span> / 100</b>
+              </div>
+              <div class="meter"><i id="ppMeter"></i></div>
+              <p class="rep-note">Day one. This climbs with every clean daily re-check — reuse it with any buyer, no re-upload.</p>
+              <div class="pp-actions">
+                <button class="btn btn-ghost" type="button" id="resetBtn">Verify another vendor</button>
+              </div>
+            </div>
+
+            <p class="sr-only" role="status" aria-live="polite" id="live"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <p class="eyebrow">The problem</p>
+      <h2>Approved once. Then quietly forgotten.</h2>
+      <p class="lede">
+        Mid-market Indian companies check a vendor the day they onboard — and then nobody owns
+        keeping that record true. GST status lapses, bank details change, certificates expire.
+        Procurement, Finance, and Compliance keep deciding who to pay and what to report on
+        information that may no longer be real.
+      </p>
+      <div class="stats">
+        <div class="stat">
+          <div class="num">$6.8M</div>
+          <div class="cap">Fraud losses tied to stale vendor data in a single dataset.</div>
+        </div>
+        <div class="stat">
+          <div class="num">12&nbsp;→&nbsp;1</div>
+          <div class="cap">Days to onboard a vendor — before Pramaan, and after.</div>
+        </div>
+        <div class="stat">
+          <div class="num">0</div>
+          <div class="cap">People assigned to watch the vendor once the deal is signed.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">How it works</p>
+        <h2>One check, then a watch that never sleeps.</h2>
+        <p>Pramaan runs the same loop for every vendor, forever — quiet until something that
+          actually matters changes.</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <h3>Verify once</h3>
+          <p>The vendor submits GST, PAN and bank details a single time. Pramaan confirms each
+            against the live government registry — what the vendor says is a claim; what the
+            government says is fact.</p>
+        </li>
+        <li>
+          <h3>Watch every day</h3>
+          <p>The same checks re-run on a schedule. A silent smoke-detector: it only speaks up for
+            changes that affect a real decision, never for trivia.</p>
+        </li>
+        <li>
+          <h3>Alert the right person</h3>
+          <p>A suspended GST or a new bank account routes straight to Finance or Compliance — with
+            a one-tap action and a permanent, tamper-proof record.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="priya" id="compliance">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">For compliance teams</p>
+        <h2 class="section-head" style="margin-bottom: 0.8rem">What Priya sees on Monday morning.</h2>
+        <p style="color: var(--ink-soft); max-width: 44ch">
+          One screen, already sorted — the vendors that need attention today at the top, each
+          alert routed to whoever can act on it. No hunting across three tools.
+        </p>
+      </div>
+      <div class="alert-card" role="table" aria-label="Sample vendor alerts">
+        <div class="alert-row" role="row">
+          <span class="sev hi" role="cell" aria-label="High severity"></span>
+          <div role="cell">
+            <div class="who">Ravi Logistics</div>
+            <div class="what">GST status → SUSPENDED</div>
+          </div>
+          <span class="route" role="cell">→ Finance</span>
+        </div>
+        <div class="alert-row" role="row">
+          <span class="sev hi" role="cell" aria-label="High severity"></span>
+          <div role="cell">
+            <div class="who">Meher Textiles</div>
+            <div class="what">Bank account → changed</div>
+          </div>
+          <span class="route" role="cell">→ Finance</span>
+        </div>
+        <div class="alert-row" role="row">
+          <span class="sev md" role="cell" aria-label="Medium severity"></span>
+          <div role="cell">
+            <div class="who">Kadam Suppliers</div>
+            <div class="what">43B(h) MSME dues · 9 days left</div>
+          </div>
+          <span class="route" role="cell">→ Compliance</span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span class="brand" aria-hidden="true">
+      <span class="deva">प्रमाण</span><span class="name" style="font-size:1.05rem">Pramaan</span>
+    </span>
+    <span class="disc">A front-end preview. Verification and monitoring run on the Pramaan
+      backend; this demo validates formats locally and issues a sample passport.</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+    var GSTIN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+    var PAN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var $ = function (id) { return document.getElementById(id); };
+
+    var form = $("verifyForm");
+    var passport = $("passport");
+    var live = $("live");
+    var sinceTimer = null;
+
+    function setError(inputId, hintId, msg) {
+      var input = $(inputId), hint = $(hintId);
+      if (msg) {
+        input.setAttribute("aria-invalid", "true");
+        hint.textContent = msg;
+        hint.classList.add("err");
+      } else {
+        input.removeAttribute("aria-invalid");
+        hint.classList.remove("err");
+      }
+      return !msg;
+    }
+
+    // Auto-uppercase the record fields as the user types.
+    ["gstin", "pan"].forEach(function (id) {
+      $(id).addEventListener("input", function () {
+        var s = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        this.setSelectionRange(s, s);
+      });
+    });
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = $("legalName").value.trim();
+      var gst = $("gstin").value.trim().toUpperCase();
+      var pan = $("pan").value.trim().toUpperCase();
+      var ok = true, firstBad = null;
+
+      if (!setError("legalName", "legalName-hint", name ? "" : "Enter the legal business name.")) { ok = false; firstBad = firstBad || "legalName"; }
+      if (!setError("gstin", "gstin-hint", GSTIN.test(gst) ? "" : "That GSTIN isn’t valid. Format: 27AAAAA1111A1Z1.")) { ok = false; firstBad = firstBad || "gstin"; }
+      else { $("gstin-hint").textContent = "15 characters"; }
+      if (!setError("pan", "pan-hint", PAN.test(pan) ? "" : "That PAN isn’t valid. Format: AAAAA1111A.")) { ok = false; firstBad = firstBad || "pan"; }
+      else { $("pan-hint").textContent = "10 characters"; }
+
+      var consent = $("consent");
+      if (!consent.checked) {
+        ok = false; firstBad = firstBad || "consent";
+        live.textContent = "You must agree to the consent statement to continue.";
+        consent.focus();
+      }
+
+      if (!ok) {
+        if (firstBad && firstBad !== "consent") { $(firstBad).focus(); }
+        live.textContent = "Please fix the highlighted fields.";
+        return;
+      }
+
+      issue(name, gst, pan, $("vendorType").value);
+    });
+
+    function issue(name, gst, pan, type) {
+      $("ppName").textContent = name;
+      $("ppGst").textContent = gst;
+      $("ppPan").textContent = pan;
+      $("ppType").textContent = type;
+      $("ppId").textContent = "PP-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+      form.classList.add("hide");
+      passport.classList.add("show");
+      passport.setAttribute("aria-hidden", "false");
+
+      var seal = $("seal");
+      if (!reduce) { seal.classList.remove("stamp"); void seal.offsetWidth; seal.classList.add("stamp"); }
+
+      // Day-one reputation: one clean verification = 5 / 100 (per the scoring model).
+      var score = 5;
+      $("ppRep").textContent = "0";
+      var meter = $("ppMeter");
+      meter.style.width = "0%";
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          meter.style.width = score + "%";
+        });
+      });
+      var shown = 0;
+      var repTimer = setInterval(function () {
+        shown += 1;
+        $("ppRep").textContent = shown;
+        if (shown >= score) clearInterval(repTimer);
+      }, reduce ? 1 : 90);
+
+      // Live "last checked" ticker.
+      var t0 = Date.now();
+      $("ppSince").textContent = "just now";
+      clearInterval(sinceTimer);
+      sinceTimer = setInterval(function () {
+        var s = Math.round((Date.now() - t0) / 1000);
+        $("ppSince").textContent = s < 1 ? "just now" : s + "s ago";
+      }, 1000);
+
+      live.textContent = "Trust passport issued for " + name + ". Status: active and government-verified. Daily monitoring is on.";
+      passport.focus && passport.setAttribute("tabindex", "-1");
+      $("ppName").scrollIntoView({ block: "nearest" });
+    }
+
+    $("resetBtn").addEventListener("click", function () {
+      clearInterval(sinceTimer);
+      passport.classList.remove("show");
+      passport.setAttribute("aria-hidden", "true");
+      form.classList.remove("hide");
+      form.reset();
+      $("gstin-hint").textContent = "15 characters";
+      $("pan-hint").textContent = "10 characters";
+      live.textContent = "";
+      $("legalName").focus();
+    });
+  })();
+</script>
