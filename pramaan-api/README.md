@@ -90,6 +90,24 @@ The alert desk: pending alerts, routed to the right owner, with a tamper-proof t
 tenant-scoped; acting appends an audit entry that cannot be deleted; cross-tenant
 action refused.
 
+## Phase 6 — Oracle Fusion write-back connector (push) ✅
+
+The first outbound pipe: pushes verified changes into the buyer's Oracle supplier master.
+
+- `src/erp/types.ts` — `ErpClient` socket + `VerifiedChange`.
+- `src/erp/idempotency.ts` — SHA-256 fingerprint over
+  (vendor_id + field_name + verified_value + verified_at); a repeat push is a no-op.
+- `src/erp/mapping.ts` — Pramaan fields → Oracle supplier attributes.
+- `src/erp/providers/oracle-mock.ts` — practice Oracle client (honors idempotency,
+  simulates timeouts). Swap for a real REST adapter later.
+- `src/erp/oracle-connector.ts` — `syncChange` (map → key → call, retry with
+  exponential backoff, dead-letter on persistent failure) and `runOracleSync`
+  (batch + record connection health, set sync_direction OUTBOUND/TWO_WAY).
+
+`test/erp-oracle.test.ts` — Oracle called with mapped attributes; same batch twice
+→ no duplicate supplier; retry-then-succeed; dead-letter; DB marks CONNECTED /
+DEGRADED. (Uses the existing `erp_connections` table — no new migration.)
+
 ## Requirements
 
 - Node.js 22.6+ (uses native TypeScript type-stripping and the built-in test runner).
