@@ -1,0 +1,10 @@
+{
+  "name": "pramaan-api",
+  "version": "0.1.0",
+  "description": "Pramaan backend — Phase 2: Government Registry Verification Layer (GRVL)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  }
+}
