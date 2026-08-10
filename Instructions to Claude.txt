@@ -1,0 +1,110 @@
+TASK: Fill in the "Problem Space" section (Sections 0 to Section 15) of the PRD template 
+(PRD Template [E2E]v8.docz) using all the research files in the current project folder: C:\Rethink System\Case Study 3
+
+This folder contains all supporting resources I've added. Use everything in this folder as your 
+source material. Do NOT touch the Solution Space section.
+
+Work section by section, in order, and stop after each one so I can review before you 
+continue to the next.
+
+======================================================
+1. WRITING STYLE
+======================================================
+- Plain, simple language — something a smart 10-year-old could follow. No jargon, 
+  no buzzwords, no corporate-speak.
+- Write like a person telling a story, not a consultant filing a report. Short 
+  sentences. Active voice.
+- Keep it straightforward — say the thing directly, don't hedge it into vagueness.
+- Every "Insight & Conclusion" box must say the SO WHAT, not repeat the facts above 
+  it. One sharp sentence, not a summary.
+- Follow the template's own instructions exactly: each subsection already tells you 
+  "what to write here" and gives "questions to help you" — actually answer those 
+  questions, don't just write around them.
+
+======================================================
+2. USE THE ACTUAL RESEARCH — DON'T INVENT ANYTHING
+======================================================
+Pull only from what's actually in the workbook and other files in the folder. 
+Use these tabs specifically:
+- "Primary Research Insights" and "Survey Answers" / "user interview questions" — 
+  for real quotes and stories (Section 1.1 Real User Scenario, Section 8.2 Primary 
+  Research Findings)
+- "Journey & Pain Points" and "Themes and Patterns" — for the recurring pattern/cycle 
+  (Section 1.2, Section 5)
+- "Secondary Research" + "Secondary Research Insights" — for stats and market data 
+  (Section 1.3 Evidence of Impact, Section 6 Business Impact, Section 9)
+- "Competitor Analysis" and "Competitor Mapping" — for Section 7 (Existing Ecosystem) 
+  and Section 10 (Competitor Analysis)
+- "Gaps & Opportunities" / "Gaps & Open Questions" — for Section 7.4 (Architectural 
+  Ceilings) and Section 11 (Problem Clustering)
+- "Narrowed Problem Statement" and "Convergence" — for Section 14
+- "Hypothesis" / "Hypothesis Validation" — for Section 15 (Key Assumptions)
+- "Reference Library" — this is your source of truth for citations (see below)
+- do not fabricate any new data
+- do not repeat any sections
+If a section needs a fact and there's no research for it in the folder, don't make one 
+up — flag it clearly: "No source found for this — needs research" instead of guessing.
+
+======================================================
+3. REAL STORIES FROM PRIMARY RESEARCH
+======================================================
+Wherever the template asks for a scenario, story, or quote (Sections 1.1, 8.2, and 
+anywhere else it fits naturally):
+- Pull a real moment from an actual interview or survey response — a specific person, 
+  a specific situation, in their own words where possible.
+- Use short direct quotes (properly attributed) rather than paraphrased summaries — 
+  real words are more convincing than a clean rewrite.
+- If multiple people said something similar, say so — "this came up with three 
+  different families" is stronger than one quote alone.
+- Flag any say-do gap you spot (someone said one thing but clearly did another).
+
+======================================================
+4. CITATIONS AND LINKS
+======================================================
+- Use the "Reference Library" tab as the master source list. Every number, stat, or 
+  quote in the doc should point back to something in that tab (report name, website, 
+  or interviewee name) in the "Cite your sources" box for that section.
+- Go through every tab and pull out every link/URL/source that exists — compile them 
+  into the citation boxes as you go, don't leave any unused.
+- If you find a claim with NO matching source in the Reference Library, flag it: 
+  "⚠️ This needs a citation — couldn't find the source for this."
+- If you spot a gap — a section that clearly needs a market size stat, a competitor 
+  fact, etc., and nothing in the folder covers it — tell me explicitly what's 
+  missing so I can go find it.
+
+======================================================
+5. IMAGES
+======================================================
+- As you go through the files in the folder, flag any existing image, chart, 
+  screenshot, or diagram that's relevant to the section you're writing.
+- Insert a placeholder directly in that spot in the PRD, and always name the EXACT 
+  source so I can find it again, like:
+  [IMAGE PLACEHOLDER: <what it shows> — source file: <exact file name in the folder>, 
+  sheet/tab or page: <name>, cell/slide reference if applicable: <e.g. cell F12, 
+  slide 4>. Insert this image here.]
+- This is just a marker for me — I'll go pull the actual image from that exact file/
+  location myself and drop it in. Be precise enough that I don't have to go hunting.
+
+======================================================
+6. CHARTS
+======================================================
+- Wherever a section has data that would land better as a chart than as a paragraph 
+  of numbers (market size over time, survey results, competitor comparison, before/
+  after cost, etc.), insert a placeholder like:
+  [CHART PLACEHOLDER: <chart type e.g. bar/line/pie> — showing <exactly what data> — 
+  data source file: <exact file name>, tab/sheet: <name>, cell range if applicable: 
+  <e.g. B4:D9>. I will build this chart myself.]
+- Be specific about what the X and Y axis (or categories) should be, and exactly 
+  where the underlying numbers live, so I know exactly what to plot.
+
+======================================================
+7. FORMAT
+======================================================
+- Keep the template's structure exactly as-is — same headings, same numbering, same 
+  Mentor Tip boxes untouched.
+- Only fill in the "Your answer" and "Cite your sources" blanks (and add the image/
+  chart placeholders where relevant).
+- After each section, pause and show me the draft before moving to the next one.
+- Craft a really good prompt to structre our problem space prd in a really good reable and insghtful manner. I wil ldo this in cowork. The goals ito keep it   under 7-8 pages and strucutre it beautifully. Plain 5th grade english, no emdashes, no short sentneces and crafted with the best story telling. You may      add more from product management stadpoint as skill
+
+I am just giving the PRD. Dont add anything else. I just need a formatting prompt and it should make snese a sa prd
