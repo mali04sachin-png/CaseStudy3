@@ -6,6 +6,13 @@ A product case study for a **vendor management and verification platform**, buil
 Product Requirements Document (PRD) exercise. This repository holds all the research,
 interviews, and working documents behind it.
 
+### 📖 Read the case study
+
+- **[Solution Blueprint](Vendor_Trust_Solution_Blueprint.html)** — the whole idea on one page.
+- **[POC Feature List & ERP Integration Plan](Vendor_Trust_Profile_POC_and_ERP_Integration.html)** — the detailed version.
+
+*(The full PRD is still being written and will be added here when it's ready.)*
+
 ## The problem in one line
 
 Companies check a vendor once when they first sign them up, then treat that information as

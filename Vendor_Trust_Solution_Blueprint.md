@@ -1,3 +1,9 @@
+---
+title: Vendor Trust Platform — Solution Blueprint
+---
+
+[← Back to overview](index.html)
+
 # Vendor Trust Platform — Solution Blueprint
 
 ## The problem, in one line

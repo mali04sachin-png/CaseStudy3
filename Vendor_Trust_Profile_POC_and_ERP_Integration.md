@@ -1,3 +1,9 @@
+---
+title: Vendor Trust Profile — POC Feature List & ERP Integration Plan
+---
+
+[← Back to overview](index.html)
+
 # Vendor Trust Profile — POC Feature List & ERP Integration Plan
 
 ## Part 1: Consolidated POC Features
