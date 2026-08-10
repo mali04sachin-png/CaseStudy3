@@ -1,5 +1,7 @@
 # Case Study 3 — Vendor Trust Platform
 
+**Author:** Sachin Mali
+
 A product case study for a **vendor management and verification platform**, built as a
 Product Requirements Document (PRD) exercise. This repository holds all the research,
 interviews, and working documents behind it.
