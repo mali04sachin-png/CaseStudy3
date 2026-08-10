@@ -108,6 +108,24 @@ The first outbound pipe: pushes verified changes into the buyer's Oracle supplie
 → no duplicate supplier; retry-then-succeed; dead-letter; DB marks CONNECTED /
 DEGRADED. (Uses the existing `erp_connections` table — no new migration.)
 
+## Phase 7 — ERP-agnostic pull API (bulk + incremental) ✅
+
+The inbound side: the buyer's ERP polls Pramaan on its own schedule. Built once,
+works for any ERP.
+
+- `src/pull/pagination.ts` — `clampPageSize`: default 100, hard cap 500, min 1.
+- `src/pull/vendors.ts` — `bulkVendors` (paginated, tenant-scoped list) and
+  `changedVendors` (delta since a cursor; `resync_required: true` when `since`
+  is older than the 30-day retention window; returns `next_since` + records the
+  watermark on `erp_connections`).
+- `src/http/server.ts` — `GET /v1/buyers/:buyerId/vendors` (page_size/page) and
+  `GET /v1/buyers/:buyerId/vendors/changes?since=`. Path buyer_id must match the
+  caller's token (403 otherwise).
+
+`test/pull.test.ts` + HTTP tests — huge page_size clamped to 500 and only own
+vendors; stale `since` → resync_required; fresh `since` → only later changes +
+next_since; cross-tenant pull refused.
+
 ## Requirements
 
 - Node.js 22.6+ (uses native TypeScript type-stripping and the built-in test runner).

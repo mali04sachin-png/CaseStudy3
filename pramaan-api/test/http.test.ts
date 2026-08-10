@@ -60,6 +60,37 @@ test('a missing token is 401, not 403', async () => {
   assert.equal(res.status, 401);
 });
 
+test('pull API: a buyer can list its own vendors (200)', async () => {
+  const token = signToken({
+    sub: 'u',
+    email: 'admin@t.com',
+    role: 'BUYER_ADMIN',
+    buyerId: 'b1',
+    vendorId: null,
+  });
+  const res = await fetch(`${base}/v1/buyers/b1/vendors?page_size=100000`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.pageSize, 500); // clamped
+  assert.deepEqual(body.vendors, []); // stub DB
+});
+
+test('pull API: a buyer cannot list another tenant\'s vendors (403)', async () => {
+  const token = signToken({
+    sub: 'u',
+    email: 'admin@t.com',
+    role: 'BUYER_ADMIN',
+    buyerId: 'b1',
+    vendorId: null,
+  });
+  const res = await fetch(`${base}/v1/buyers/OTHER/vendors`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  assert.equal(res.status, 403);
+});
+
 test('the login endpoint exists and never asks the client to pick a role', async () => {
   // With db: null this throws internally → 500, but it proves the single shared
   // /v1/auth/login route is wired and accepts only email+password (no role field).

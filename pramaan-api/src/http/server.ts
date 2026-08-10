@@ -12,6 +12,7 @@ import { inviteComplianceUser } from '../services/invites.ts';
 import { verifyToken } from '../auth/jwt.ts';
 import { listPendingAlerts } from '../alerts/dashboard.ts';
 import { actOnAlert } from '../alerts/actions.ts';
+import { bulkVendors, changedVendors } from '../pull/vendors.ts';
 import { AppError, AuthenticationError } from '../auth/errors.ts';
 import type { GRVL } from '../verification/grvl.ts';
 
@@ -50,7 +51,8 @@ function bearer(req: http.IncomingMessage): string {
 export function createServer(deps: ServerDeps): http.Server {
   return http.createServer(async (req, res) => {
     try {
-      const url = (req.url ?? '').split('?')[0];
+      const parsed = new URL(req.url ?? '/', 'http://localhost');
+      const url = parsed.pathname;
       const method = req.method ?? 'GET';
 
       if (method === 'POST' && url === '/v1/auth/login') {
@@ -82,6 +84,26 @@ export function createServer(deps: ServerDeps): http.Server {
         const claims = verifyToken(bearer(req));
         const { alertId, action } = await readJson(req);
         const result = await actOnAlert(deps.db, claims, alertId, action);
+        return send(res, 200, result);
+      }
+
+      // Pull API (Phase 7) — path param buyer_id + query string.
+      let m: RegExpMatchArray | null;
+      if (method === 'GET' && (m = url.match(/^\/v1\/buyers\/([^/]+)\/vendors$/))) {
+        const claims = verifyToken(bearer(req));
+        const psRaw = parsed.searchParams.get('page_size');
+        const pgRaw = parsed.searchParams.get('page');
+        const result = await bulkVendors(deps.db, claims, m[1], {
+          pageSize: psRaw === null ? undefined : Number(psRaw),
+          page: pgRaw === null ? undefined : Number(pgRaw),
+        });
+        return send(res, 200, result);
+      }
+
+      if (method === 'GET' && (m = url.match(/^\/v1\/buyers\/([^/]+)\/vendors\/changes$/))) {
+        const claims = verifyToken(bearer(req));
+        const since = parsed.searchParams.get('since') ?? new Date(0).toISOString();
+        const result = await changedVendors(deps.db, claims, m[1], { since });
         return send(res, 200, result);
       }
 
