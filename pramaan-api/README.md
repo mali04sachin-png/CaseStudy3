@@ -25,6 +25,34 @@ Nothing else changes when real keys arrive: add e.g. `providers/ekycnow.ts` that
 implements `VerificationProvider` by calling the real HTTP endpoint, and pass it to
 `GRVL` in place of a mock.
 
+## Phase 3 — Role-locked login, signup & consent ✅
+
+The doors real people use, with the rules baked in.
+
+- `src/auth/` — `errors.ts` (typed, HTTP-status-carrying errors), `password.ts` (bcrypt),
+  `jwt.ts` (login tokens; role is stamped from the account, never sent by the client),
+  `guard.ts` (`requireRole` → 403 on mismatch, never a silent empty view).
+- `src/db/client.ts` — Postgres connection to Supabase.
+- `src/services/` — `buyers.ts` (provision a buyer + its single BUYER_ADMIN),
+  `vendors.ts` (self-registration: consent gate → local format check → verify → atomic write),
+  `invites.ts` (BUYER_ADMIN invites COMPLIANCE, tenant copied from the token),
+  `auth.ts` (one shared login for all roles), `access.ts` (RLS-scoped reads).
+- `src/http/server.ts` — the endpoints: `POST /v1/auth/login`, `POST /v1/vendors/register`,
+  `POST /v1/buyer-users/invite`, `GET /v1/compliance/alerts` (COMPLIANCE-only).
+
+### Tests
+
+- `test/auth-unit.test.ts` — password, JWT, and role-guard (no DB).
+- `test/http.test.ts` — the server: VENDOR→403, COMPLIANCE→200, missing token→401 (no DB).
+- `test/auth-integration.test.ts` — runs against the live Supabase DB (set `DATABASE_URL`),
+  proving all six acceptance criteria, then cleaning up. Skipped if `DATABASE_URL` is unset.
+
+Run the DB-backed tests with the connection string in the env:
+
+```bash
+DATABASE_URL="postgresql://…" npm test
+```
+
 ## Requirements
 
 - Node.js 22.6+ (uses native TypeScript type-stripping and the built-in test runner).

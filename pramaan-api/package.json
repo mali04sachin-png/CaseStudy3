@@ -6,5 +6,10 @@
   "private": true,
   "scripts": {
     "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
   }
 }
