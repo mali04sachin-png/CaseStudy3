@@ -1,3 +1,10 @@
 theme: jekyll-theme-cayman
 title: "Case Study 3 — Vendor Trust Platform"
 description: "Pramaan: verify a vendor once against government records, then watch forever. A product case study from research to engineering."
+
+# Apply the theme's layout to every page (including the README-as-homepage)
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
