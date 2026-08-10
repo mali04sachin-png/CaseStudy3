@@ -8,8 +8,11 @@ import type { AddressInfo } from 'node:net';
 import { createServer } from '../src/http/server.ts';
 import { signToken } from '../src/auth/jwt.ts';
 
-// The db/grvl deps aren't touched by the routes under test here.
-const server = createServer({ db: null, grvl: null as any });
+// A stub DB that returns no rows — enough to exercise the token + guard path
+// without a real database. The role guard runs before any query, so a VENDOR is
+// refused before the stub is ever consulted.
+const fakeDb = { query: async () => ({ rows: [] }) };
+const server = createServer({ db: fakeDb, grvl: null as any });
 let base = '';
 
 before(async () => {

@@ -9,8 +9,9 @@ import http from 'node:http';
 import { login } from '../services/auth.ts';
 import { registerVendor } from '../services/vendors.ts';
 import { inviteComplianceUser } from '../services/invites.ts';
-import { requireRole } from '../auth/guard.ts';
 import { verifyToken } from '../auth/jwt.ts';
+import { listPendingAlerts } from '../alerts/dashboard.ts';
+import { actOnAlert } from '../alerts/actions.ts';
 import { AppError, AuthenticationError } from '../auth/errors.ts';
 import type { GRVL } from '../verification/grvl.ts';
 
@@ -72,8 +73,16 @@ export function createServer(deps: ServerDeps): http.Server {
 
       if (method === 'GET' && url === '/v1/compliance/alerts') {
         const claims = verifyToken(bearer(req));
-        requireRole(claims, ['COMPLIANCE']); // VENDOR / BUYER_ADMIN → 403
-        return send(res, 200, { alerts: [] });
+        // listPendingAlerts enforces COMPLIANCE-only (403 for VENDOR / BUYER_ADMIN).
+        const alerts = await listPendingAlerts(deps.db, claims);
+        return send(res, 200, { alerts });
+      }
+
+      if (method === 'POST' && url === '/v1/alerts/act') {
+        const claims = verifyToken(bearer(req));
+        const { alertId, action } = await readJson(req);
+        const result = await actOnAlert(deps.db, claims, alertId, action);
+        return send(res, 200, result);
       }
 
       return send(res, 404, { error: 'Not found' });

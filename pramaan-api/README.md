@@ -71,6 +71,25 @@ The watchman: re-checks vendors on a schedule and alerts only on changes that ma
 `test/monitoring.test.ts` — suspended GST → alert to Finance; non-essential address
 change → logged, no alert; materiality lookups. Runs against the live DB.
 
+## Phase 5 — Routing alerts & append-only auditing ✅
+
+The alert desk: pending alerts, routed to the right owner, with a tamper-proof trail.
+
+- `src/alerts/dashboard.ts` — `listPendingAlerts`: COMPLIANCE-only, RLS-scoped list
+  of NEW/ASSIGNED alerts for the caller's tenant, most severe first.
+- `src/alerts/routing.ts` — `alertsForRole`: surfaces alerts to their internal owner
+  (FINANCE / COMPLIANCE / LEGAL / PROCUREMENT).
+- `src/alerts/actions.ts` — `actOnAlert`: assign/resolve/mute/reassess updates the
+  alert AND appends a non-deletable `audit_log_entries` row in ONE transaction.
+- `src/http/server.ts` — `GET /v1/compliance/alerts` (dashboard),
+  `POST /v1/alerts/act` (act on an alert).
+- DB: `../pramaan-db/05_phase5_alert_grants.sql` grants the dashboard read access
+  under RLS.
+
+`test/alerts.test.ts` — bank change routes exclusively to FINANCE; dashboard is
+tenant-scoped; acting appends an audit entry that cannot be deleted; cross-tenant
+action refused.
+
 ## Requirements
 
 - Node.js 22.6+ (uses native TypeScript type-stripping and the built-in test runner).
