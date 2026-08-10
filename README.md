@@ -2,9 +2,22 @@
 
 **Author:** Sachin Mali
 
-A product case study for a **vendor management and verification platform**, built as a
-Product Requirements Document (PRD) exercise. This repository holds all the research,
-interviews, and working documents behind it.
+> **In short:** Companies verify a vendor once at signup, then trust that information forever —
+> even after bank accounts, GST status, and MSME classification quietly go stale. **Pramaan** is a
+> Vendor Trust Platform that verifies each vendor against real government records, keeps watching
+> for changes, and lets a vendor prove themselves once and reuse that trust across many buyers.
+> The prize: onboarding drops from ~12 days to ~1, and a nasty surprise (a changed bank account,
+> a lapsed registration) is caught the moment it happens instead of after it costs money.
+
+This is a full product case study — from user research and problem framing, through the product
+concept, to the engineering data model and a phased build plan. Everything below is drawn from the
+research and working documents in this repository.
+
+**The story in three layers:**
+
+1. **The problem** — vendor data goes stale, and no single system is responsible for noticing.
+2. **The solution** — verify once against government records, then monitor forever, and make trust portable.
+3. **The build** — a multi-tenant data model, push *and* pull ERP integration, and a strict 9-phase delivery plan.
 
 ### 📖 Read the case study
 
