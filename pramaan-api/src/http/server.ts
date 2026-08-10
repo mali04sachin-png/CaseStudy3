@@ -13,7 +13,10 @@ import { verifyToken } from '../auth/jwt.ts';
 import { listPendingAlerts } from '../alerts/dashboard.ts';
 import { actOnAlert } from '../alerts/actions.ts';
 import { bulkVendors, changedVendors } from '../pull/vendors.ts';
-import { AppError, AuthenticationError } from '../auth/errors.ts';
+import { shareProfile } from '../sharing/share.ts';
+import { getVendorReputation } from '../sharing/reputation.ts';
+import { requireRole } from '../auth/guard.ts';
+import { AppError, AuthenticationError, AuthorizationError } from '../auth/errors.ts';
 import type { GRVL } from '../verification/grvl.ts';
 
 export interface ServerDeps {
@@ -84,6 +87,22 @@ export function createServer(deps: ServerDeps): http.Server {
         const claims = verifyToken(bearer(req));
         const { alertId, action } = await readJson(req);
         const result = await actOnAlert(deps.db, claims, alertId, action);
+        return send(res, 200, result);
+      }
+
+      // Profile sharing & reputation (Phase 8).
+      if (method === 'POST' && url === '/v1/vendor/share') {
+        const claims = verifyToken(bearer(req));
+        const { buyerId } = await readJson(req);
+        const result = await shareProfile(deps.db, claims, buyerId);
+        return send(res, 201, result);
+      }
+
+      if (method === 'GET' && url === '/v1/vendor/reputation') {
+        const claims = verifyToken(bearer(req));
+        requireRole(claims, ['VENDOR']);
+        if (!claims.vendorId) throw new AuthorizationError('No vendor bound to this token');
+        const result = await getVendorReputation(deps.db, claims.vendorId);
         return send(res, 200, result);
       }
 

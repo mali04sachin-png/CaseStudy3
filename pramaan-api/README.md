@@ -126,6 +126,27 @@ works for any ERP.
 vendors; stale `since` → resync_required; fresh `since` → only later changes +
 next_since; cross-tenant pull refused.
 
+## Phase 8 — Profile sharing, reuse & reputation ✅ (backend complete)
+
+Verify once, reuse everywhere — the product's headline promise.
+
+- `src/sharing/share.ts` — `shareProfile`: a VENDOR links their existing passport
+  to a new buyer (a new `buyer_vendor_links` row). No re-upload; idempotent.
+- `src/sharing/reputation.ts` — `reputationScore` (pure: tenure up to 50 at ~1yr +
+  5/validation up to 50, capped 100) and `getVendorReputation` (gathers tenure +
+  VALID-check count for a vendor).
+- `src/http/server.ts` — `POST /v1/vendor/share`, `GET /v1/vendor/reputation`.
+
+`test/sharing.test.ts` — reputation zero/caps/monotonic scaling; a vendor shares
+with Buyer B in one call with exactly one passport (no re-upload), Buyer B then
+sees the vendor via the pull API, and re-sharing is idempotent; seasoned vendor
+outranks a fresh one.
+
+---
+
+**All 8 backend phases are complete.** `npm test` → 45 passing (unit + HTTP +
+live-DB integration). Next: the frontend/UI layer on top of these APIs.
+
 ## Requirements
 
 - Node.js 22.6+ (uses native TypeScript type-stripping and the built-in test runner).
