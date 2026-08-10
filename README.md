@@ -1,4 +1,6 @@
-# Case Study 3 — Vendor Trust Platform
+---
+title: Case Study 3 — Vendor Trust Platform
+---
 
 **Author:** Sachin Mali
 
