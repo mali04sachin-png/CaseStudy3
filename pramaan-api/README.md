@@ -53,6 +53,24 @@ Run the DB-backed tests with the connection string in the env:
 DATABASE_URL="postgresql://…" npm test
 ```
 
+## Phase 4 — Continuous Monitoring Engine (CME) ✅
+
+The watchman: re-checks vendors on a schedule and alerts only on changes that matter.
+
+- `src/monitoring/materiality.ts` — looks up the rules table (ERD 4.B) and decides
+  if a change is material (alert) or log-only. A rule routed to `NONE` (e.g. a
+  non-essential address change) is silent.
+- `src/monitoring/cme.ts` — `recordChange` (always log the proof, alert only if
+  material) and `runMonitoringCycle` (the cron body: re-verify each active vendor,
+  detect status changes, log + route alerts, update the passport).
+- `src/monitoring/worker.ts` — the entry point a scheduler invokes:
+  `DATABASE_URL="…" node src/monitoring/worker.ts`.
+- DB: `../pramaan-db/04_phase4_materiality_fix.sql` corrects the non-essential
+  address rule to route to `NONE` (silent), per the spec.
+
+`test/monitoring.test.ts` — suspended GST → alert to Finance; non-essential address
+change → logged, no alert; materiality lookups. Runs against the live DB.
+
 ## Requirements
 
 - Node.js 22.6+ (uses native TypeScript type-stripping and the built-in test runner).
