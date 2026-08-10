@@ -1,0 +1,418 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pramaan — App (clickable demo)</title>
+
+<style>
+  :root {
+    --paper: #ECEFF4;
+    --surface: #ffffff;
+    --surface-2: #f6f8fb;
+    --ink: #142238;
+    --ink-soft: #3c4863;
+    --ink-mute: #59647a;
+    --line: #dde2ea;
+    --accent: #0c6e59;
+    --accent-strong: #095645;
+    --accent-contrast: #ffffff;
+    --good: #0c6e59;
+    --warn: #9c5a00;
+    --crit: #a5382c;
+    --shadow: 24px 30px 60px -30px rgba(20, 34, 59, 0.28);
+    --shadow-sm: 0 1px 0 rgba(20, 34, 59, 0.04), 0 12px 24px -18px rgba(20, 34, 59, 0.35);
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0b1422; --surface: #122036; --surface-2: #17273f;
+      --ink: #e9edf4; --ink-soft: #bcc6d6; --ink-mute: #8a97ac; --line: #243650;
+      --accent: #31bf95; --accent-strong: #55d3ae; --accent-contrast: #06251c;
+      --good: #31bf95; --warn: #e0a64b; --crit: #e1705e;
+      --shadow: 24px 34px 70px -34px rgba(0,0,0,.65);
+      --shadow-sm: 0 1px 0 rgba(0,0,0,.3), 0 16px 30px -20px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0b1422; --surface: #122036; --surface-2: #17273f;
+    --ink: #e9edf4; --ink-soft: #bcc6d6; --ink-mute: #8a97ac; --line: #243650;
+    --accent: #31bf95; --accent-strong: #55d3ae; --accent-contrast: #06251c;
+    --good: #31bf95; --warn: #e0a64b; --crit: #e1705e;
+    --shadow: 24px 34px 70px -34px rgba(0,0,0,.65);
+    --shadow-sm: 0 1px 0 rgba(0,0,0,.3), 0 16px 30px -20px rgba(0,0,0,.7);
+  }
+
+  * , *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3 { font-family: var(--serif); font-weight: 600; line-height: 1.12; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  .skip { position:absolute; left:.75rem; top:-3rem; background:var(--surface); color:var(--ink); border:1px solid var(--line); padding:.55rem .9rem; border-radius:8px; z-index:30; transition:top .15s; }
+  .skip:focus { top:.75rem; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; font:inherit; font-weight:600; line-height:1; padding:.7rem 1.05rem; border-radius:9px; border:1px solid transparent; cursor:pointer; text-decoration:none; transition:background .15s, border-color .15s, transform .1s; }
+  .btn-primary { background:var(--accent); color:var(--accent-contrast); }
+  .btn-primary:hover { background:var(--accent-strong); }
+  .btn-ghost { background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-ghost:hover { border-color:var(--ink-mute); }
+  .btn-sm { padding:.45rem .7rem; font-size:.82rem; }
+  .btn:active { transform:translateY(1px); }
+  .brand { display:inline-flex; align-items:baseline; gap:.5rem; text-decoration:none; color:var(--ink); }
+  .brand .deva { font-family:var(--serif); color:var(--accent); font-size:1.3rem; line-height:1; }
+  .brand .name { font-family:var(--serif); font-weight:600; font-size:1.15rem; }
+
+  /* ---------- Login ---------- */
+  .authwrap { min-height:100dvh; display:grid; place-items:center; padding:1.5rem; }
+  .authcard { width:min(400px,100%); background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:1.75rem 1.6rem 1.6rem; }
+  .authcard .brand { margin-bottom:1.2rem; }
+  .authcard h1 { font-size:1.5rem; }
+  .authcard .sub { color:var(--ink-mute); font-size:.9rem; margin-top:.35rem; margin-bottom:1.3rem; }
+  .field { margin-bottom:.9rem; }
+  label.lbl { display:block; font-size:.82rem; font-weight:600; color:var(--ink-soft); margin-bottom:.35rem; }
+  input, select { width:100%; font:inherit; font-size:.95rem; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:.62rem .7rem; }
+  input:focus, select:focus { outline:2.5px solid var(--accent); outline-offset:1px; border-color:transparent; }
+  input[aria-invalid="true"] { border-color:var(--crit); }
+  .err { color:var(--crit); font-size:.78rem; font-weight:600; margin-top:.35rem; min-height:1em; }
+  .authcard button[type=submit] { width:100%; margin-top:.4rem; padding:.8rem; }
+  .demo-accts { margin-top:1.3rem; padding-top:1.1rem; border-top:1px dashed var(--line); }
+  .demo-accts p { font-size:.74rem; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-mute); font-weight:700; margin-bottom:.6rem; }
+  .demo-accts .row { display:flex; flex-wrap:wrap; gap:.5rem; }
+  .demo-accts button { flex:1 1 auto; }
+  .note { margin-top:1rem; font-size:.75rem; color:var(--ink-mute); text-align:center; }
+
+  /* ---------- App shell ---------- */
+  .app { display:none; }
+  .app.show { display:block; }
+  .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.7rem clamp(1rem,4vw,2rem); background:color-mix(in srgb,var(--paper) 88%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  .userchip { display:flex; align-items:center; gap:.6rem; }
+  .avatar { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--accent); color:var(--accent-contrast); font-weight:700; font-size:.85rem; }
+  .userchip .meta { line-height:1.15; }
+  .userchip .who { font-weight:600; font-size:.9rem; }
+  .userchip .role { font-size:.72rem; color:var(--ink-mute); letter-spacing:.04em; text-transform:uppercase; }
+  .shell { padding:clamp(1.25rem,4vw,2.25rem) clamp(1rem,4vw,2rem); max-width:1080px; margin-inline:auto; }
+  .roomhead { margin-bottom:1.5rem; }
+  .roomhead .eyebrow { font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+  .roomhead h2 { font-size:clamp(1.6rem,3.5vw,2.1rem); margin-top:.4rem; }
+  .roomhead p { color:var(--ink-soft); margin-top:.5rem; max-width:60ch; }
+
+  .demo-banner { background:color-mix(in srgb,var(--warn) 12%,var(--surface)); border:1px solid color-mix(in srgb,var(--warn) 35%,transparent); color:var(--ink-soft); font-size:.82rem; padding:.55rem .9rem; border-radius:9px; margin-bottom:1.4rem; }
+
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.75rem; }
+  .tile { background:var(--surface); border:1px solid var(--line); border-radius:13px; padding:1.05rem 1.1rem; box-shadow:var(--shadow-sm); }
+  .tile .k { font-size:.76rem; color:var(--ink-mute); }
+  .tile .v { font-family:var(--serif); font-size:1.9rem; font-weight:600; font-variant-numeric:tabular-nums; margin-top:.2rem; }
+  .tile .v.crit { color:var(--crit); }
+  .tile .v.good { color:var(--good); }
+
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden; }
+  .card > h3 { font-family:var(--sans); font-weight:700; font-size:1rem; padding:1rem 1.15rem; border-bottom:1px solid var(--line); }
+
+  .arow { display:grid; grid-template-columns:6px 1.4fr 1fr auto; align-items:center; gap:.9rem; padding:.85rem 1.15rem; border-bottom:1px solid var(--line); }
+  .arow:last-child { border-bottom:0; }
+  .arow.done { opacity:.55; }
+  .sev { align-self:stretch; border-radius:3px; min-height:34px; }
+  .sev.CRITICAL, .sev.HIGH { background:var(--crit); }
+  .sev.MEDIUM { background:var(--warn); }
+  .sev.LOW { background:var(--ink-mute); }
+  .arow .who { font-weight:600; font-size:.94rem; }
+  .arow .what { font-size:.8rem; color:var(--ink-mute); font-family:var(--mono); }
+  .pill { font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.25rem .5rem; border-radius:999px; white-space:nowrap; border:1px solid var(--line); color:var(--ink-soft); background:color-mix(in srgb,var(--ink) 6%,transparent); }
+  .arow .actions { display:flex; gap:.4rem; }
+  .statuspill { font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--good); }
+
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+
+  /* passport (vendor room) */
+  .pp-head { display:flex; gap:1rem; align-items:center; padding:1.15rem; border-bottom:1px solid var(--line); }
+  .seal { flex:none; width:64px; height:64px; border-radius:50%; display:grid; place-items:center; color:var(--accent-contrast); background:radial-gradient(circle at 32% 28%, color-mix(in srgb,var(--accent) 78%,white), var(--accent)); border:2px solid color-mix(in srgb,var(--accent) 70%,var(--ink)); box-shadow:inset 0 0 0 4px color-mix(in srgb,var(--accent-contrast) 22%,transparent); font-size:1.6rem; font-weight:700; }
+  .statustag { display:inline-flex; align-items:center; gap:.35rem; margin-top:.35rem; font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--good); background:color-mix(in srgb,var(--good) 12%,transparent); border:1px solid color-mix(in srgb,var(--good) 35%,transparent); padding:.18rem .5rem; border-radius:999px; }
+  dl.kv { display:grid; grid-template-columns:auto 1fr; gap:.5rem 1rem; margin:0; padding:1.15rem; }
+  dl.kv dt { font-size:.76rem; color:var(--ink-mute); }
+  dl.kv dd { margin:0; font-family:var(--mono); font-size:.86rem; text-align:right; }
+  .meter { height:9px; border-radius:999px; background:color-mix(in srgb,var(--ink) 10%,var(--surface-2)); overflow:hidden; margin:.4rem 0; }
+  .meter > i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--accent-strong)); transition:width 1s cubic-bezier(.2,.8,.2,1); border-radius:999px; }
+  .shares { list-style:none; margin:0; padding:0; }
+  .shares li { display:flex; align-items:center; justify-content:space-between; padding:.7rem 1.15rem; border-bottom:1px solid var(--line); font-size:.9rem; }
+  .shares li:last-child { border-bottom:0; }
+  .inline-form { display:flex; gap:.5rem; padding:1rem 1.15rem; border-top:1px solid var(--line); }
+  .inline-form input { flex:1; }
+
+  .conn { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.15rem; border-bottom:1px solid var(--line); }
+  .conn:last-of-type { border-bottom:0; }
+  .conn .name { font-weight:600; }
+  .conn .desc { font-size:.8rem; color:var(--ink-mute); }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .dot.on { background:var(--good); }
+  .dot.off { background:var(--ink-mute); }
+
+  .toast { position:fixed; left:50%; bottom:1.5rem; transform:translateX(-50%) translateY(1.5rem); background:var(--ink); color:var(--paper); padding:.7rem 1.1rem; border-radius:10px; font-size:.88rem; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:40; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:820px){ .tiles{ grid-template-columns:repeat(2,1fr); } .grid2{ grid-template-columns:1fr; } }
+  @media (max-width:520px){ .arow{ grid-template-columns:6px 1fr; row-gap:.5rem; } .arow .pill,.arow .actions{ grid-column:2; } }
+  @media (prefers-reduced-motion:reduce){ *{ animation-duration:.001ms!important; transition-duration:.001ms!important; } }
+</style>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- ================= LOGIN ================= -->
+<div class="authwrap" id="login">
+  <main class="authcard" id="main">
+    <a class="brand" href="index.html"><span class="deva" aria-hidden="true">प्रमाण</span><span class="name">Pramaan</span></a>
+    <h1>Sign in</h1>
+    <p class="sub">One sign-in for everyone. Pramaan shows you the right screens for your role.</p>
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label class="lbl" for="email">Work email</label>
+        <input id="email" type="email" autocomplete="username" placeholder="you@company.in" required aria-describedby="login-err" />
+      </div>
+      <div class="field">
+        <label class="lbl" for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required aria-describedby="login-err" />
+      </div>
+      <p class="err" id="login-err" role="alert"></p>
+      <button class="btn btn-primary" type="submit">Sign in</button>
+    </form>
+    <div class="demo-accts">
+      <p>Demo accounts — tap to sign in</p>
+      <div class="row">
+        <button class="btn btn-ghost btn-sm" data-demo="ravi@demo.in">Ravi · Vendor</button>
+        <button class="btn btn-ghost btn-sm" data-demo="priya@demo.in">Priya · Compliance</button>
+        <button class="btn btn-ghost btn-sm" data-demo="ananya@demo.in">Ananya · Admin</button>
+      </div>
+    </div>
+    <p class="note">Clickable demo · sample data only</p>
+  </main>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="app" id="app">
+  <header class="topbar">
+    <a class="brand" href="index.html"><span class="deva" aria-hidden="true">प्रमाण</span><span class="name">Pramaan</span></a>
+    <div class="userchip">
+      <span class="avatar" id="uAvatar" aria-hidden="true">?</span>
+      <span class="meta"><span class="who" id="uName">—</span><br /><span class="role" id="uRole">—</span></span>
+      <button class="btn btn-ghost btn-sm" id="signout" style="margin-left:.4rem">Sign out</button>
+    </div>
+  </header>
+  <div class="shell" id="room" tabindex="-1"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  (function () {
+    "use strict";
+    var $ = function (s, r) { return (r || document).querySelector(s); };
+    var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    var USERS = {
+      "ravi@demo.in":   { pw: "demo", role: "VENDOR",      name: "Ravi Kumar",  org: "Ravi Logistics Pvt Ltd" },
+      "priya@demo.in":  { pw: "demo", role: "COMPLIANCE",  name: "Priya Menon", org: "Acme Manufacturing" },
+      "ananya@demo.in": { pw: "demo", role: "BUYER_ADMIN", name: "Ananya Rao",  org: "Acme Manufacturing" }
+    };
+
+    var ALERTS = [
+      { id: 1, who: "Ravi Logistics",   what: "GST status → SUSPENDED",        sev: "HIGH",     route: "FINANCE",    status: "NEW" },
+      { id: 2, who: "Meher Textiles",   what: "Bank account → changed",        sev: "CRITICAL", route: "FINANCE",    status: "NEW" },
+      { id: 3, who: "Kadam Suppliers",  what: "43B(h) MSME dues · 9 days left", sev: "HIGH",     route: "COMPLIANCE", status: "NEW" },
+      { id: 4, who: "Neelam Foods",     what: "MSME class → shifted",          sev: "HIGH",     route: "FINANCE",    status: "ASSIGNED" },
+      { id: 5, who: "Orbit Freight",    what: "GST status → SUSPENDED",        sev: "HIGH",     route: "FINANCE",    status: "RESOLVED" }
+    ];
+
+    var SHARES = ["Acme Manufacturing", "Sunrise Retail"];
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    function toast(msg) {
+      var t = $("#toast"); t.textContent = msg; t.classList.add("show");
+      clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2600);
+    }
+
+    /* ---------------- Auth ---------------- */
+    function login(email) {
+      var u = USERS[email];
+      if (!u) return false;
+      $("#login").style.display = "none";
+      $("#app").classList.add("show");
+      $("#uName").textContent = u.name;
+      $("#uRole").textContent = u.role.replace("_", " ");
+      $("#uAvatar").textContent = u.name.split(" ").map(function (p) { return p[0]; }).join("").slice(0, 2);
+      renderRoom(email, u);
+      var room = $("#room"); room.focus();
+      return true;
+    }
+
+    $("#loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var email = $("#email").value.trim().toLowerCase();
+      var pw = $("#password").value;
+      var u = USERS[email];
+      if (!u || u.pw !== pw) {
+        $("#login-err").textContent = "That email and password don't match. Try a demo account below.";
+        $("#email").setAttribute("aria-invalid", "true");
+        return;
+      }
+      $("#login-err").textContent = "";
+      login(email);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (b) {
+      b.addEventListener("click", function () {
+        var email = b.getAttribute("data-demo");
+        $("#email").value = email; $("#password").value = "demo";
+        login(email);
+      });
+    });
+
+    $("#signout").addEventListener("click", function () {
+      $("#app").classList.remove("show");
+      $("#login").style.display = "grid";
+      $("#loginForm").reset(); $("#login-err").textContent = "";
+      $("#email").removeAttribute("aria-invalid");
+      $("#email").focus();
+    });
+
+    /* ---------------- Rooms ---------------- */
+    function renderRoom(email, u) {
+      if (u.role === "COMPLIANCE") return renderCompliance(u);
+      if (u.role === "VENDOR") return renderVendor(u);
+      return renderAdmin(u);
+    }
+
+    var banner = '<div class="demo-banner">This is a clickable demo — the data below is sample only. Actions update this screen but don\'t hit a live server yet.</div>';
+
+    /* ---- Priya: compliance dashboard ---- */
+    function renderCompliance(u) {
+      var open = ALERTS.filter(function (a) { return a.status === "NEW" || a.status === "ASSIGNED"; }).length;
+      var crit = ALERTS.filter(function (a) { return (a.sev === "CRITICAL") && a.status !== "RESOLVED"; }).length;
+      var resolved = ALERTS.filter(function (a) { return a.status === "RESOLVED"; }).length;
+
+      $("#room").innerHTML =
+        '<div class="roomhead"><p class="eyebrow">Compliance</p><h2>Vendors that need you today</h2>' +
+        '<p>Sorted by urgency, each alert already routed to whoever can act on it. Resolving one writes a permanent audit record.</p></div>' +
+        banner +
+        '<div class="tiles">' +
+          tile("Open alerts", open) +
+          tile("Critical", crit, "crit") +
+          tile("Resolved today", resolved, "good") +
+          tile("Vendors watched", 128) +
+        '</div>' +
+        '<div class="card"><h3>Alerts</h3><div id="alertList"></div></div>';
+      drawAlerts();
+    }
+    function tile(k, v, cls) {
+      return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || "") + '">' + v + '</div></div>';
+    }
+    function drawAlerts() {
+      var list = $("#alertList");
+      list.innerHTML = ALERTS.map(function (a) {
+        var done = a.status === "RESOLVED";
+        var actions = done
+          ? '<span class="statuspill">✓ Resolved</span>'
+          : '<button class="btn btn-primary btn-sm" data-act="resolve" data-id="' + a.id + '">Resolve</button>' +
+            '<button class="btn btn-ghost btn-sm" data-act="mute" data-id="' + a.id + '">Mute</button>';
+        return '<div class="arow ' + (done ? "done" : "") + '">' +
+          '<span class="sev ' + a.sev + '" aria-hidden="true"></span>' +
+          '<div><div class="who">' + esc(a.who) + '</div><div class="what">' + esc(a.what) + '</div></div>' +
+          '<span class="pill">→ ' + esc(a.route) + '</span>' +
+          '<span class="actions">' + actions + '</span>' +
+          '</div>';
+      }).join("");
+    }
+    $("#room").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-act]"); if (!b) return;
+      var id = +b.getAttribute("data-id"), act = b.getAttribute("data-act");
+      var a = ALERTS.filter(function (x) { return x.id === id; })[0]; if (!a) return;
+      a.status = act === "resolve" ? "RESOLVED" : "MUTED";
+      toast(act === "resolve" ? "Resolved · audit record written" : "Muted for this vendor");
+      // re-render tiles + list
+      renderCompliance(USERS["priya@demo.in"]);
+    });
+
+    /* ---- Ravi: vendor room ---- */
+    function renderVendor(u) {
+      $("#room").innerHTML =
+        '<div class="roomhead"><p class="eyebrow">Your trust passport</p><h2>Verified once. Reused everywhere.</h2>' +
+        '<p>Share this same government-verified profile with any buyer in one click — no re-uploading documents.</p></div>' +
+        banner +
+        '<div class="grid2">' +
+          '<div class="card">' +
+            '<div class="pp-head"><span class="seal" aria-hidden="true">✓</span>' +
+            '<div><h3 style="border:0;padding:0;font-family:var(--serif)">' + esc(u.org) + '</h3>' +
+            '<span class="statustag">✓ Active · Government-verified</span></div></div>' +
+            '<dl class="kv"><dt>GSTIN</dt><dd>27AAAAA1111A1Z1</dd><dt>PAN</dt><dd>AAAAA1111A</dd>' +
+            '<dt>MSME</dt><dd>SMALL · Udyam</dd><dt>Last checked</dt><dd>2h ago</dd></dl>' +
+            '<div style="padding:0 1.15rem 1.15rem"><div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--ink-mute)"><span>Reputation</span><b style="font-family:var(--mono);color:var(--ink)">63 / 100</b></div>' +
+            '<div class="meter"><i id="repbar"></i></div><p style="font-size:.76rem;color:var(--ink-mute);margin-top:.3rem">8 months verified · 6 clean daily re-checks</p></div>' +
+          '</div>' +
+          '<div class="card"><h3>Shared with</h3><ul class="shares" id="shareList"></ul>' +
+            '<form class="inline-form" id="shareForm"><label class="sr-only" for="buyerName">Buyer name</label>' +
+            '<input id="buyerName" placeholder="Add a buyer…" /><button class="btn btn-primary btn-sm" type="submit">Share</button></form></div>' +
+        '</div>';
+      drawShares();
+      var bar = $("#repbar"); requestAnimationFrame(function () { requestAnimationFrame(function () { bar.style.width = "63%"; }); });
+      $("#shareForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = $("#buyerName").value.trim(); if (!name) return;
+        SHARES.push(name); $("#buyerName").value = ""; drawShares();
+        toast("Shared with " + name + " · no re-upload");
+      });
+    }
+    function drawShares() {
+      $("#shareList").innerHTML = SHARES.map(function (s) {
+        return '<li><span>' + esc(s) + '</span><span class="statuspill">✓ Trusted</span></li>';
+      }).join("");
+    }
+
+    /* ---- Ananya: admin room ---- */
+    var CONNS = [
+      { name: "Oracle Fusion", desc: "Push · verified data written to your supplier master", on: true },
+      { name: "SAP S/4HANA", desc: "Pull · SAP fetches changes on its own schedule", on: false }
+    ];
+    var TEAM = [{ name: "Priya Menon", email: "priya@demo.in", role: "Compliance" }];
+    function renderAdmin(u) {
+      $("#room").innerHTML =
+        '<div class="roomhead"><p class="eyebrow">Administration · ' + esc(u.org) + '</p><h2>Connections & team</h2>' +
+        '<p>Connect your ERP and invite the people who watch your vendors. Only you can do this.</p></div>' +
+        banner +
+        '<div class="grid2">' +
+          '<div class="card"><h3>ERP connections</h3><div id="connList"></div></div>' +
+          '<div class="card"><h3>Compliance team</h3><ul class="shares" id="teamList"></ul>' +
+            '<form class="inline-form" id="inviteForm"><label class="sr-only" for="invEmail">Invite email</label>' +
+            '<input id="invEmail" type="email" placeholder="name@acme.in" /><button class="btn btn-primary btn-sm" type="submit">Invite</button></form></div>' +
+        '</div>';
+      drawConns(); drawTeam();
+      $("#inviteForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var em = $("#invEmail").value.trim(); if (!em) return;
+        TEAM.push({ name: em.split("@")[0], email: em, role: "Compliance" });
+        $("#invEmail").value = ""; drawTeam();
+        toast("Invite sent to " + em + " · role locked to Compliance");
+      });
+    }
+    function drawConns() {
+      $("#connList").innerHTML = CONNS.map(function (c, i) {
+        return '<div class="conn"><div><div class="name">' + esc(c.name) + '</div><div class="desc">' + esc(c.desc) + '</div></div>' +
+          '<div style="display:flex;align-items:center;gap:.6rem"><span class="dot ' + (c.on ? "on" : "off") + '" aria-hidden="true"></span>' +
+          '<button class="btn btn-ghost btn-sm" data-conn="' + i + '">' + (c.on ? "Connected" : "Connect") + '</button></div></div>';
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll("[data-conn]"), function (b) {
+        b.addEventListener("click", function () {
+          var c = CONNS[+b.getAttribute("data-conn")]; c.on = !c.on; drawConns();
+          toast(c.name + (c.on ? " connected" : " disconnected"));
+        });
+      });
+    }
+    function drawTeam() {
+      $("#teamList").innerHTML = TEAM.map(function (t) {
+        return '<li><span>' + esc(t.name) + ' · <span style="color:var(--ink-mute);font-size:.85em">' + esc(t.email) + '</span></span><span class="pill">' + esc(t.role) + '</span></li>';
+      }).join("");
+    }
+  })();
+</script>
