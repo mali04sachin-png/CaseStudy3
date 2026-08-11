@@ -275,6 +275,24 @@
       <div data-screen-label="Priya Discover Vendors">
         <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">Discover verified vendors</h1>
         <p style="color:#565f6f;font-size:14px;margin:0 0 18px;max-width:680px;">Vendors already verified and trusted by Pramaan through other buyers. Onboard the ones you need in one click — their trust passport is reused, so your team does zero re-verification.</p>
+
+        <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:16px 18px;margin-bottom:24px;">
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px;">Verify any GSTIN against government records</div>
+          <div style="font-size:12px;color:#8890a0;margin-bottom:12px;">Enter a real GSTIN — Pramaan checks it live and shows the registered legal name and status.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input value="{{ verifyGst }}" onChange="{{ onVerifyGstChange }}" placeholder="e.g. 27AAAAA1111A1Z1" style="flex:1;min-width:220px;max-width:320px;padding:10px 14px;border:1px solid #d7dbe3;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-transform:uppercase;outline:none;" />
+            <button onClick="{{ doVerifyGst }}" style="background:#12182b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Verify</button>
+          </div>
+          <sc-if value="{{ hasVerifyResult }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;padding:12px 14px;border-radius:8px;background:#f8f9fb;border:1px solid #eef0f3;">
+              <div style="font-weight:600;font-size:13.5px;">{{ verifyResultName }}</div>
+              <div style="font-size:12.5px;margin-top:5px;"><span style="font-weight:700;color:{{ verifyStatusColor }};">{{ verifyStatusLabel }}</span> <span style="color:#8890a0;font-family:'IBM Plex Mono',monospace;margin-left:6px;">{{ verifyResultGst }}</span></div>
+              <div style="font-size:11px;color:#8890a0;margin-top:5px;">Checked via {{ verifyProvider }}</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="font-weight:600;font-size:14px;margin-bottom:10px;">Onboard a Pramaan-verified vendor</div>
         <input value="{{ directoryQuery }}" onChange="{{ onDirectoryChange }}" placeholder="Search verified vendors by name or GST…" style="width:100%;max-width:480px;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:18px;outline:none;" />
         <div style="font-size:12px;color:#8890a0;margin-bottom:10px;">{{ directoryLabel }}</div>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
@@ -807,6 +825,8 @@ class Component extends DCLogic {
     searchQuery: "",
     directoryQuery: "",
     directoryResults: [],
+    verifyGst: "",
+    verifyResult: null,
     dashMsmeFilter: "all",
     dashAttentionOnly: false,
     selectedVendorId: null,
@@ -1000,6 +1020,24 @@ class Component extends DCLogic {
       directoryQuery: this.state.directoryQuery,
       onDirectoryChange: (e) => { this.setState({ directoryQuery: e.target.value }); loadDirectory(this, e.target.value); },
       directoryLabel: this.state.directoryResults.length + " verified vendor(s) available to onboard",
+      verifyGst: this.state.verifyGst,
+      onVerifyGstChange: (e) => this.setState({ verifyGst: e.target.value }),
+      hasVerifyResult: !!(this.state.verifyResult && !this.state.verifyResult.loading),
+      verifyResultName: this.state.verifyResult ? this.state.verifyResult.name : "",
+      verifyResultGst: this.state.verifyResult ? this.state.verifyResult.gst : "",
+      verifyProvider: this.state.verifyResult ? this.state.verifyResult.provider : "",
+      verifyStatusLabel: (function (s) { return s === "ACTIVE" ? "✓ Active" : s === "SUSPENDED" ? "⚠ Suspended" : s === "CANCELLED" ? "⚠ Cancelled" : s === "ERROR" ? "Could not verify" : (s || "Unknown"); })(this.state.verifyResult && this.state.verifyResult.status),
+      verifyStatusColor: (function (s) { return s === "ACTIVE" ? "#0f7a5c" : (s === "ERROR" ? "#8890a0" : "#b3261e"); })(this.state.verifyResult && this.state.verifyResult.status),
+      doVerifyGst: () => {
+        const self = this;
+        const gst = (self.state.verifyGst || "").toUpperCase().trim();
+        if (!gst) return;
+        self.setState({ verifyResult: { loading: true } });
+        apiFetch("/v1/verify/gstin?gst=" + encodeURIComponent(gst)).then((r) => {
+          if (r.status === 200 && r.data) self.setState({ verifyResult: { name: r.data.legalName || "(name unavailable)", gst: r.data.input, status: r.data.gstStatus || "UNKNOWN", provider: r.data.sourceProvider } });
+          else self.setState({ verifyResult: { name: (r.data && r.data.error) || "Verification failed", gst: gst, status: "ERROR", provider: "" } });
+        });
+      },
       directoryVendors: this.state.directoryResults.map((v) => ({
         name: v.legal_name, gst: v.gst_number, msme: (MSME_LABEL[v.msme] || v.msme || ""), reputation: v.reputation,
         onboardLabel: v.already_onboarded ? "✓ Onboarded" : "Onboard",
