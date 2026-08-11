@@ -31,8 +31,9 @@ export async function bulkVendors(db: any, claims: AuthClaims, buyerId: string, 
   const page = Math.max(0, Math.floor(opts.page ?? 0));
 
   const { rows } = await db.query(
-    `select v.id as vendor_id, v.legal_name, p.gst_number, p.status,
-            l.internal_criticality, p.updated_at
+    `select v.id as vendor_id, v.legal_name, p.gst_number, p.pan_number,
+            p.msme_classification as msme, p.status, l.internal_criticality,
+            p.updated_at
        from buyer_vendor_links l
        join vendors v on v.id = l.vendor_id
        join trust_passports p on p.vendor_id = v.id

@@ -40,7 +40,7 @@ try {
   await db.query(`insert into vendors (id, legal_name, vendor_type) values ($1,'Ravi Logistics Pvt Ltd','Proprietorship')`, [V_RAVI]);
   const { rows: pp } = await db.query(
     `insert into trust_passports (vendor_id, gst_number, pan_number, registered_address, msme_classification, status, created_at, gst_last_verified_at)
-     values ($1,'27AAAAA1111A1Z1','AAAAA1111A',$2,'SMALL','ACTIVE', now() - interval '240 days', now() - interval '2 hours') returning id`,
+     values ($1,'27RAVIL1111R1Z1','RAVIL1111R',$2,'SMALL','ACTIVE', now() - interval '240 days', now() - interval '2 hours') returning id`,
     [V_RAVI, JSON.stringify({ city: 'Pune', state: 'MH' })],
   );
   const passportId = pp[0].id;

@@ -15,6 +15,7 @@ import { actOnAlert } from '../alerts/actions.ts';
 import { bulkVendors, changedVendors } from '../pull/vendors.ts';
 import { shareProfile } from '../sharing/share.ts';
 import { getVendorReputation } from '../sharing/reputation.ts';
+import { listConnections, setConnection } from '../erp/connections.ts';
 import { requireRole } from '../auth/guard.ts';
 import { AppError, AuthenticationError, AuthorizationError } from '../auth/errors.ts';
 import type { GRVL } from '../verification/grvl.ts';
@@ -110,6 +111,22 @@ export async function routeRequest(
         return send(res, 201, result);
       }
 
+      // Password reset request — always 200 with a generic message (never reveal
+      // whether an account exists). INTEGRATION.md: POST /auth/forgot.
+      if (method === 'POST' && url === '/v1/auth/forgot') {
+        await readJson(req);
+        return send(res, 200, {
+          ok: true,
+          message: 'If that account exists, a reset link has been sent.',
+        });
+      }
+
+      // ERP integrations (BUYER_ADMIN) — read the tenant's connections.
+      if (method === 'GET' && url === '/v1/integrations') {
+        const claims = verifyToken(bearer(req));
+        return send(res, 200, { integrations: await listConnections(deps.db, claims) });
+      }
+
       if (method === 'POST' && url === '/v1/buyer-users/invite') {
         const claims = verifyToken(bearer(req));
         const result = await inviteComplianceUser(deps.db, claims, await readJson(req));
@@ -146,8 +163,17 @@ export async function routeRequest(
         return send(res, 200, result);
       }
 
-      // Pull API (Phase 7) — path param buyer_id + query string.
       let m: RegExpMatchArray | null;
+
+      // Connect/disconnect an ERP (BUYER_ADMIN). Body: { connect: true|false }.
+      if (method === 'POST' && (m = url.match(/^\/v1\/integrations\/([^/]+)\/connect$/))) {
+        const claims = verifyToken(bearer(req));
+        const body = await readJson(req);
+        const result = await setConnection(deps.db, claims, m[1], body.connect !== false);
+        return send(res, 200, result);
+      }
+
+      // Pull API (Phase 7) — path param buyer_id + query string.
       if (method === 'GET' && (m = url.match(/^\/v1\/buyers\/([^/]+)\/vendors$/))) {
         const claims = verifyToken(bearer(req));
         const psRaw = parsed.searchParams.get('page_size');

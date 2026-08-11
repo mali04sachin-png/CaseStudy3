@@ -11243,8 +11243,9 @@ async function bulkVendors(db, claims, buyerId, opts = {}) {
   const pageSize = clampPageSize(opts.pageSize);
   const page = Math.max(0, Math.floor(opts.page ?? 0));
   const { rows } = await db.query(
-    `select v.id as vendor_id, v.legal_name, p.gst_number, p.status,
-            l.internal_criticality, p.updated_at
+    `select v.id as vendor_id, v.legal_name, p.gst_number, p.pan_number,
+            p.msme_classification as msme, p.status, l.internal_criticality,
+            p.updated_at
        from buyer_vendor_links l
        join vendors v on v.id = l.vendor_id
        join trust_passports p on p.vendor_id = v.id
@@ -11342,6 +11343,49 @@ async function getVendorReputation(db, vendorId) {
   };
 }
 
+// src/erp/connections.ts
+var ERP_ALIASES = {
+  oracle: "ORACLE_FUSION",
+  oracle_fusion: "ORACLE_FUSION",
+  ORACLE_FUSION: "ORACLE_FUSION",
+  sap: "SAP_ARIBA",
+  sap_ariba: "SAP_ARIBA",
+  SAP_ARIBA: "SAP_ARIBA",
+  netsuite: "NETSUITE",
+  NETSUITE: "NETSUITE"
+};
+async function listConnections(db, claims) {
+  requireRole(claims, ["BUYER_ADMIN"]);
+  const { rows } = await db.query(
+    `select erp_type, connection_status, sync_direction, last_synced_at
+       from erp_connections
+      where buyer_id = $1
+      order by erp_type`,
+    [claims.buyerId]
+  );
+  return rows;
+}
+async function setConnection(db, claims, erp, connect) {
+  requireRole(claims, ["BUYER_ADMIN"]);
+  const erpType = ERP_ALIASES[erp];
+  if (!erpType) {
+    throw new AppError(`Unknown ERP "${erp}"`, 400);
+  }
+  const status = connect ? "CONNECTED" : "DISCONNECTED";
+  const { rows } = await db.query(
+    `update erp_connections
+        set connection_status = $1,
+            last_synced_at = case when $2 then now() else last_synced_at end
+      where buyer_id = $3 and erp_type = $4
+      returning erp_type, connection_status, sync_direction, last_synced_at`,
+    [status, connect, claims.buyerId, erpType]
+  );
+  if (!rows[0]) {
+    throw new AppError(`No ${erpType} connection configured for this tenant`, 404);
+  }
+  return rows[0];
+}
+
 // src/http/server.ts
 var CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
 function applyCors(res) {
@@ -11402,6 +11446,17 @@ async function routeRequest(req, res, deps) {
         const result = await registerVendor(deps.db, deps.grvl, await readJson(req));
         return send(res, 201, result);
       }
+      if (method === "POST" && url === "/v1/auth/forgot") {
+        await readJson(req);
+        return send(res, 200, {
+          ok: true,
+          message: "If that account exists, a reset link has been sent."
+        });
+      }
+      if (method === "GET" && url === "/v1/integrations") {
+        const claims = verifyToken(bearer(req));
+        return send(res, 200, { integrations: await listConnections(deps.db, claims) });
+      }
       if (method === "POST" && url === "/v1/buyer-users/invite") {
         const claims = verifyToken(bearer(req));
         const result = await inviteComplianceUser(deps.db, claims, await readJson(req));
@@ -11432,6 +11487,12 @@ async function routeRequest(req, res, deps) {
         return send(res, 200, result);
       }
       let m;
+      if (method === "POST" && (m = url.match(/^\/v1\/integrations\/([^/]+)\/connect$/))) {
+        const claims = verifyToken(bearer(req));
+        const body = await readJson(req);
+        const result = await setConnection(deps.db, claims, m[1], body.connect !== false);
+        return send(res, 200, result);
+      }
       if (method === "GET" && (m = url.match(/^\/v1\/buyers\/([^/]+)\/vendors$/))) {
         const claims = verifyToken(bearer(req));
         const psRaw = parsed.searchParams.get("page_size");
