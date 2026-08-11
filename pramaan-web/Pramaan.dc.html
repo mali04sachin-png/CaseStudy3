@@ -687,6 +687,58 @@ async function apiLogin(email, password) {
   } catch (e) { return { ok: false, error: "Couldn't reach the server. Check your connection." }; }
 }
 
+// ---- Live data mapping (backend shapes -> prototype seed shapes) ----
+const MSME_LABEL = { MICRO: "Micro Enterprise", SMALL: "Small Enterprise", MEDIUM: "Medium Enterprise", NOT_APPLICABLE: "Not Registered" };
+const CRIT_LABEL = { CRITICAL: "Critical", SIGNIFICANT: "Significant", NON_ESSENTIAL: "Non-essential" };
+const STATE_MAP = { ACTIVE: "verified", UNVERIFIED: "awaiting_consent", SUSPENDED: "retrying", DEREGISTERED: "verified" };
+const ALERT_DESC = {
+  BANK_CHANGE: "Bank account changed — payment run affected.",
+  GST_SUSPENDED: "GST registration suspended by GSTN — tax credit at risk.",
+  MSME_CLASS_SHIFT: "MSME classification shifted — 43B(h) protection may change.",
+  MSME_DUES_43B: "43B(h) MSME dues approaching the 45-day window.",
+  ADDRESS_CHANGE: "Registered office address updated."
+};
+function fmtTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) + ", " +
+           d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+  } catch (e) { return iso || ""; }
+}
+async function loadBuyerData(self) {
+  if (!AUTH || !AUTH.buyerId) return;
+  const alertsP = AUTH.role === "COMPLIANCE" ? apiFetch("/v1/compliance/alerts") : Promise.resolve({ data: { alerts: [] } });
+  const [vres, ares] = await Promise.all([
+    apiFetch("/v1/buyers/" + AUTH.buyerId + "/vendors?page_size=500"),
+    alertsP
+  ]);
+  const vlist = (vres.data && vres.data.vendors) || [];
+  const idxById = {};
+  self.vendors = vlist.map(function (v, i) {
+    idxById[v.vendor_id] = i;
+    return {
+      id: i, name: v.legal_name, gst: v.gst_number || "", pan: v.pan_number || "",
+      ifsc: "—", bank: "—",
+      msme: MSME_LABEL[v.msme] || "Not Registered",
+      criticality: CRIT_LABEL[v.internal_criticality] || "Non-essential",
+      state: STATE_MAP[v.status] || "verified",
+      risk: v.risk || "low", days: null, history: []
+    };
+  });
+  const alist = (ares.data && ares.data.alerts) || [];
+  const alerts = alist.map(function (a, i) {
+    return {
+      id: i, _bid: a.id,
+      vendorIdx: idxById[a.vendor_id] != null ? idxById[a.vendor_id] : 0,
+      changeType: a.change_type, process: a.affected_process,
+      description: ALERT_DESC[a.change_type] || (a.change_type + " detected"),
+      severity: a.severity, timestamp: fmtTime(a.created_at),
+      routedTo: a.routed_to_role, status: a.status === "ASSIGNED" ? "held" : "open"
+    };
+  });
+  self.setState({ alerts });
+}
+
 class Component extends DCLogic {
   state = {
     loggedIn: false,
@@ -796,7 +848,13 @@ class Component extends DCLogic {
         actionLabel: PROCESS_ACTION[a.process] || "Review Now", statusColor, statusLabel,
         isOpen: a.status === "open", isHeld: a.status === "held",
         select: () => this.setState({ selectedAlertIdx: a.id }),
-        hold: () => this.setState(s => ({ alerts: s.alerts.map(x => x.id === a.id ? { ...x, status: "held" } : x) }))
+        hold: () => {
+          const self = this;
+          apiFetch("/v1/alerts/act", { method: "POST", body: { alertId: a._bid, action: "ASSIGN" } }).then(function (r) {
+            if (r.status === 200) loadBuyerData(self);
+            else self.setState(s => ({ alerts: s.alerts.map(x => x.id === a.id ? { ...x, status: "held" } : x) }));
+          });
+        }
       };
     });
     const highAlerts = alerts.filter(a => a.severity === "CRITICAL" || a.severity === "HIGH");
@@ -856,7 +914,9 @@ class Component extends DCLogic {
         self.setState({ loggingIn: true, loginError: "" });
         apiLogin(self.state.loginUsername.trim().toLowerCase(), self.state.loginPassword).then(function (res) {
           if (!res.ok) { self.setState({ loggingIn: false, loginError: res.error }); return; }
-          self.setState({ loggedIn: true, loggingIn: false, persona: res.persona });
+          self.vendors = [];
+          self.setState({ loggedIn: true, loggingIn: false, persona: res.persona, alerts: [] });
+          loadBuyerData(self);
         });
       },
       signOut: () => { AUTH = null; this.setState({ loggedIn: false, loggingIn: false, authView: "login", loginRole: "priya", loginUsername: DUMMY_CREDS.priya.username, loginPassword: DUMMY_CREDS.priya.password }); },
