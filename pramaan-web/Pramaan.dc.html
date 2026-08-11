@@ -658,6 +658,7 @@ const ALERT_SEED = [
 // ---- Live backend adapter (integration with pramaan-api) ----
 const API_BASE = "https://pramaan-api.vercel.app";
 let AUTH = null; // { token, role, email, buyerId, vendorId }
+let POLL = null; // auto-refresh timer
 const ROLE_TO_PERSONA = { COMPLIANCE: "priya", VENDOR: "ravi", BUYER_ADMIN: "ananya" };
 function decodeJwt(t) {
   try { return JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
@@ -747,6 +748,12 @@ async function loadBuyerData(self) {
     });
     self.setState(st);
   }
+}
+
+function stopPolling() { if (POLL) { clearInterval(POLL); POLL = null; } }
+function startPolling(self) {
+  stopPolling();
+  POLL = setInterval(function () { if (AUTH && AUTH.buyerId) loadBuyerData(self); }, 20000);
 }
 
 class Component extends DCLogic {
@@ -927,9 +934,10 @@ class Component extends DCLogic {
           self.vendors = [];
           self.setState({ loggedIn: true, loggingIn: false, persona: res.persona, alerts: [] });
           loadBuyerData(self);
+          startPolling(self);
         });
       },
-      signOut: () => { AUTH = null; this.setState({ loggedIn: false, loggingIn: false, authView: "login", loginRole: "priya", loginUsername: DUMMY_CREDS.priya.username, loginPassword: DUMMY_CREDS.priya.password }); },
+      signOut: () => { stopPolling(); AUTH = null; this.setState({ loggedIn: false, loggingIn: false, authView: "login", loginRole: "priya", loginUsername: DUMMY_CREDS.priya.username, loginPassword: DUMMY_CREDS.priya.password }); },
 
       registerRole: this.state.registerRole,
       pickRegPriya: () => this.setState({ registerRole: "priya" }), pickRegRavi: () => this.setState({ registerRole: "ravi" }), pickRegAnanya: () => this.setState({ registerRole: "ananya" }),
