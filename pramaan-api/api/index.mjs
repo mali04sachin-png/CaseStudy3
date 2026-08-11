@@ -11252,6 +11252,17 @@ async function bulkVendors(db, claims, buyerId, opts = {}) {
   const { rows } = await db.query(
     `select v.id as vendor_id, v.legal_name, p.gst_number, p.pan_number,
             p.msme_classification as msme, p.status, l.internal_criticality,
+            case
+              when exists (select 1 from alerts a
+                             where a.vendor_id = v.id and a.buyer_id = l.buyer_id
+                               and a.status in ('NEW','ASSIGNED')
+                               and a.severity in ('CRITICAL','HIGH')) then 'high'
+              when exists (select 1 from alerts a
+                             where a.vendor_id = v.id and a.buyer_id = l.buyer_id
+                               and a.status in ('NEW','ASSIGNED')
+                               and a.severity = 'MEDIUM') then 'medium'
+              else 'low'
+            end as risk,
             p.updated_at
        from buyer_vendor_links l
        join vendors v on v.id = l.vendor_id
