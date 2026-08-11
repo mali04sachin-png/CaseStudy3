@@ -993,7 +993,13 @@ class Component extends DCLogic {
       raviConsent: this.state.raviConsent,
       toggleConsent: () => this.setState(s => ({ raviConsent: !s.raviConsent })),
       raviCannotContinue: !this.state.raviConsent,
-      raviNext: () => { if (this.state.raviConsent) this.setState({ raviStep: 1 }); },
+      raviNext: () => {
+        if (!this.state.raviConsent) return;
+        const self = this;
+        apiFetch("/v1/vendor/consent", { method: "POST" }).then(function (r) {
+          if (r.status === 200) self.setState({ raviStep: 1 });
+        });
+      },
       raviContinueStyle: stylize({ background: "#12182b", color: "#fff", border: "none", padding: "13px 24px", "border-radius": "8px", "font-size": "14.5px", "font-weight": 600, cursor: "pointer", "font-family": "inherit", opacity: (this.state.raviStep === 0 && !this.state.raviConsent) || (this.state.raviStep === 1 && !raviAllOk) ? 0.45 : 1 }),
 
       raviGst: this.state.raviGst, onGstChange: (e) => this.setState({ raviGst: e.target.value }),
@@ -1019,26 +1025,25 @@ class Component extends DCLogic {
       raviCheckLog: this.state.raviCheckLog,
       raviSubmit: () => {
         if (!raviAllOk) return;
-        this.setState({ raviStep: 2, raviCheckLog: "Checking primary provider (eKYCNow)…" });
-        setTimeout(() => this.setState({ raviCheckLog: "Checking primary provider (eKYCNow)…\nPrimary timed out after 5000ms — circuit breaker tripped." }), 700);
-        setTimeout(() => this.setState({ raviCheckLog: "Checking primary provider (eKYCNow)…\nPrimary timed out after 5000ms — circuit breaker tripped.\nFailing over to backup provider (AuthBridge)…" }), 1300);
-        setTimeout(() => this.setState({ raviCheckLog: "Checking primary provider (eKYCNow)…\nPrimary timed out after 5000ms — circuit breaker tripped.\nFailing over to backup provider (AuthBridge)…\nVerified via AuthBridge." }), 1900);
-        setTimeout(() => {
-          this.vendors[BHARAT_IDX] = {
-            ...this.vendors[BHARAT_IDX], state: "verified", risk: "low", days: 44,
-            bank: "•••• " + (this.state.raviBank.slice(-4) || "4521"),
-            history: [{ date: "Today", description: "Vendor gave consent and passed government verification via AuthBridge (backup provider)." }]
-          };
-          this.setState({ raviStep: 3 });
-        }, 2400);
+        const self = this;
+        self.setState({ raviStep: 2, raviCheckLog: "Submitting to Pramaan — checking GST/PAN against the government registry (circuit breaker armed)…" });
+        apiFetch("/v1/vendor/kyc", { method: "POST", body: { gst: self.state.raviGst, pan: self.state.raviPan, bank: self.state.raviBank, ifsc: self.state.raviIfsc } }).then(function (r) {
+          if (r.status !== 200) {
+            self.setState({ raviStep: 1, raviCheckLog: "" });
+            alert((r.data && r.data.error) || "Verification failed — please check the details and try again.");
+            return;
+          }
+          const prov = (r.data && r.data.provider) || "eKYCNow";
+          setTimeout(function () { self.setState({ raviCheckLog: "Checking GST/PAN against the government registry (circuit breaker armed)…\nVerified via " + prov + " — trust passport issued." }); }, 700);
+          setTimeout(function () { self.setState({ raviStep: 3 }); }, 1400);
+        });
       },
       raviStepIs4: this.state.raviStep === 4,
       withdrawConsent: () => {
-        this.vendors[BHARAT_IDX] = {
-          ...this.vendors[BHARAT_IDX], bank: "Erased",
-          history: [...this.vendors[BHARAT_IDX].history, { date: "Today", description: "Consent withdrawn (DPDP Right to Erase) — bank details erased, GST/PAN retained for audit." }]
-        };
-        this.setState({ raviStep: 4 });
+        const self = this;
+        apiFetch("/v1/vendor/withdraw", { method: "POST" }).then(function (r) {
+          if (r.status === 200) self.setState({ raviStep: 4 });
+        });
       },
       raviReset: () => {
         this.vendors[BHARAT_IDX] = { ...this.vendors[BHARAT_IDX], state: "awaiting_consent", risk: "medium", days: null, bank: "—", history: [] };
