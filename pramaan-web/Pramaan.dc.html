@@ -283,11 +283,16 @@
             <input value="{{ verifyGst }}" onChange="{{ onVerifyGstChange }}" placeholder="e.g. 27AAAAA1111A1Z1" style="flex:1;min-width:220px;max-width:320px;padding:10px 14px;border:1px solid #d7dbe3;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-transform:uppercase;outline:none;" />
             <button onClick="{{ doVerifyGst }}" style="background:#12182b;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Verify</button>
           </div>
+          <sc-if value="{{ verifyLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:14px;font-size:12.5px;color:#8890a0;">Checking against government records… <span style="color:#b9bfca;">(the free registry API can take a few seconds)</span></div>
+          </sc-if>
           <sc-if value="{{ hasVerifyResult }}" hint-placeholder-val="{{ false }}">
             <div style="margin-top:14px;padding:12px 14px;border-radius:8px;background:#f8f9fb;border:1px solid #eef0f3;">
               <div style="font-weight:600;font-size:13.5px;">{{ verifyResultName }}</div>
               <div style="font-size:12.5px;margin-top:5px;"><span style="font-weight:700;color:{{ verifyStatusColor }};">{{ verifyStatusLabel }}</span> <span style="color:#8890a0;font-family:'IBM Plex Mono',monospace;margin-left:6px;">{{ verifyResultGst }}</span></div>
-              <div style="font-size:11px;color:#8890a0;margin-top:5px;">Checked via {{ verifyProvider }}</div>
+              <sc-if value="{{ hasVerifyProvider }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:11px;color:#8890a0;margin-top:5px;">Checked via {{ verifyProvider }}</div>
+              </sc-if>
             </div>
           </sc-if>
         </div>
@@ -1022,19 +1027,22 @@ class Component extends DCLogic {
       directoryLabel: this.state.directoryResults.length + " verified vendor(s) available to onboard",
       verifyGst: this.state.verifyGst,
       onVerifyGstChange: (e) => this.setState({ verifyGst: e.target.value }),
+      verifyLoading: !!(this.state.verifyResult && this.state.verifyResult.loading),
       hasVerifyResult: !!(this.state.verifyResult && !this.state.verifyResult.loading),
+      hasVerifyProvider: !!(this.state.verifyResult && this.state.verifyResult.provider),
       verifyResultName: this.state.verifyResult ? this.state.verifyResult.name : "",
       verifyResultGst: this.state.verifyResult ? this.state.verifyResult.gst : "",
       verifyProvider: this.state.verifyResult ? this.state.verifyResult.provider : "",
-      verifyStatusLabel: (function (s) { return s === "ACTIVE" ? "✓ Active" : s === "SUSPENDED" ? "⚠ Suspended" : s === "CANCELLED" ? "⚠ Cancelled" : s === "ERROR" ? "Could not verify" : (s || "Unknown"); })(this.state.verifyResult && this.state.verifyResult.status),
-      verifyStatusColor: (function (s) { return s === "ACTIVE" ? "#0f7a5c" : (s === "ERROR" ? "#8890a0" : "#b3261e"); })(this.state.verifyResult && this.state.verifyResult.status),
+      verifyStatusLabel: (function (s) { return s === "ACTIVE" ? "✓ Active" : s === "SUSPENDED" ? "⚠ Suspended" : s === "CANCELLED" ? "⚠ Cancelled" : s === "ERROR" ? "Could not verify" : s === "RETRY" ? "↻ Please try again" : (s || "Unknown"); })(this.state.verifyResult && this.state.verifyResult.status),
+      verifyStatusColor: (function (s) { return s === "ACTIVE" ? "#0f7a5c" : (s === "ERROR" || s === "RETRY") ? "#8890a0" : "#b3261e"; })(this.state.verifyResult && this.state.verifyResult.status),
       doVerifyGst: () => {
         const self = this;
         const gst = (self.state.verifyGst || "").toUpperCase().trim();
         if (!gst) return;
         self.setState({ verifyResult: { loading: true } });
         apiFetch("/v1/verify/gstin?gst=" + encodeURIComponent(gst)).then((r) => {
-          if (r.status === 200 && r.data) self.setState({ verifyResult: { name: r.data.legalName || "(name unavailable)", gst: r.data.input, status: r.data.gstStatus || "UNKNOWN", provider: r.data.sourceProvider } });
+          if (r.status === 200 && r.data && r.data.status === "DEGRADED") self.setState({ verifyResult: { name: "Government registry is busy right now — try once more", gst: gst, status: "RETRY", provider: "" } });
+          else if (r.status === 200 && r.data) self.setState({ verifyResult: { name: r.data.legalName || "(name unavailable)", gst: r.data.input, status: r.data.gstStatus || "UNKNOWN", provider: r.data.sourceProvider } });
           else self.setState({ verifyResult: { name: (r.data && r.data.error) || "Verification failed", gst: gst, status: "ERROR", provider: "" } });
         });
       },
