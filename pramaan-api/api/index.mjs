@@ -11242,6 +11242,13 @@ async function bulkVendors(db, claims, buyerId, opts = {}) {
   assertOwnTenant(claims, buyerId);
   const pageSize = clampPageSize(opts.pageSize);
   const page = Math.max(0, Math.floor(opts.page ?? 0));
+  const params = [buyerId];
+  let search = "";
+  if (opts.q && opts.q.trim()) {
+    params.push(`%${opts.q.trim()}%`);
+    search = ` and (v.legal_name ilike $${params.length} or p.gst_number ilike $${params.length})`;
+  }
+  params.push(pageSize, page * pageSize);
   const { rows } = await db.query(
     `select v.id as vendor_id, v.legal_name, p.gst_number, p.pan_number,
             p.msme_classification as msme, p.status, l.internal_criticality,
@@ -11249,12 +11256,57 @@ async function bulkVendors(db, claims, buyerId, opts = {}) {
        from buyer_vendor_links l
        join vendors v on v.id = l.vendor_id
        join trust_passports p on p.vendor_id = v.id
-      where l.buyer_id = $1
+      where l.buyer_id = $1${search}
       order by v.id
-      limit $2 offset $3`,
-    [buyerId, pageSize, page * pageSize]
+      limit $${params.length - 1} offset $${params.length}`,
+    params
   );
   return { buyerId, page, pageSize, count: rows.length, vendors: rows };
+}
+async function vendorDetail(db, claims, vendorId) {
+  requireRole(claims, ["VENDOR", "COMPLIANCE", "BUYER_ADMIN"]);
+  if (claims.role === "VENDOR") {
+    if (claims.vendorId !== vendorId) throw new AuthorizationError("Not your vendor record");
+  } else {
+    const { rows } = await db.query(
+      "select 1 from buyer_vendor_links where buyer_id = $1 and vendor_id = $2",
+      [claims.buyerId, vendorId]
+    );
+    if (!rows[0]) throw new AuthorizationError("Vendor is not linked to your tenant");
+  }
+  const { rows: vr } = await db.query(
+    `select v.id as vendor_id, v.legal_name, v.vendor_type, p.gst_number, p.pan_number,
+            p.msme_classification as msme, p.status, p.registered_address, p.updated_at
+       from vendors v
+       left join trust_passports p on p.vendor_id = v.id
+      where v.id = $1`,
+    [vendorId]
+  );
+  if (!vr[0]) throw new AppError("Vendor not found", 404);
+  let history = [];
+  if (claims.role === "VENDOR") {
+    const { rows } = await db.query(
+      `select vrec.verified_at as date, vrec.field_name, vrec.status
+         from verification_records vrec
+         join trust_passports p on p.id = vrec.passport_id
+        where p.vendor_id = $1
+        order by vrec.verified_at desc limit 10`,
+      [vendorId]
+    );
+    history = rows.map((r) => ({ date: r.date, description: `${r.field_name} verified \u2014 ${r.status}` }));
+  } else {
+    const { rows } = await db.query(
+      `select created_at as date, change_type, severity, routed_to_role
+         from alerts where vendor_id = $1 and buyer_id = $2
+        order by created_at desc limit 10`,
+      [vendorId, claims.buyerId]
+    );
+    history = rows.map((r) => ({
+      date: r.date,
+      description: `${r.change_type} \u2014 ${r.severity}, routed to ${r.routed_to_role}`
+    }));
+  }
+  return { ...vr[0], history };
 }
 async function changedVendors(db, claims, buyerId, opts) {
   assertOwnTenant(claims, buyerId);
@@ -11499,9 +11551,14 @@ async function routeRequest(req, res, deps) {
         const pgRaw = parsed.searchParams.get("page");
         const result = await bulkVendors(deps.db, claims, m[1], {
           pageSize: psRaw === null ? void 0 : Number(psRaw),
-          page: pgRaw === null ? void 0 : Number(pgRaw)
+          page: pgRaw === null ? void 0 : Number(pgRaw),
+          q: parsed.searchParams.get("q") ?? void 0
         });
         return send(res, 200, result);
+      }
+      if (method === "GET" && (m = url.match(/^\/v1\/vendors\/([^/]+)$/))) {
+        const claims = verifyToken(bearer(req));
+        return send(res, 200, await vendorDetail(deps.db, claims, m[1]));
       }
       if (method === "GET" && (m = url.match(/^\/v1\/buyers\/([^/]+)\/vendors\/changes$/))) {
         const claims = verifyToken(bearer(req));

@@ -12,7 +12,7 @@ import { inviteComplianceUser } from '../services/invites.ts';
 import { verifyToken } from '../auth/jwt.ts';
 import { listPendingAlerts } from '../alerts/dashboard.ts';
 import { actOnAlert } from '../alerts/actions.ts';
-import { bulkVendors, changedVendors } from '../pull/vendors.ts';
+import { bulkVendors, changedVendors, vendorDetail } from '../pull/vendors.ts';
 import { shareProfile } from '../sharing/share.ts';
 import { getVendorReputation } from '../sharing/reputation.ts';
 import { listConnections, setConnection } from '../erp/connections.ts';
@@ -181,8 +181,15 @@ export async function routeRequest(
         const result = await bulkVendors(deps.db, claims, m[1], {
           pageSize: psRaw === null ? undefined : Number(psRaw),
           page: pgRaw === null ? undefined : Number(pgRaw),
+          q: parsed.searchParams.get('q') ?? undefined,
         });
         return send(res, 200, result);
+      }
+
+      // Single vendor detail + history (Phase-7-adjacent; INTEGRATION.md GET /vendors/:id).
+      if (method === 'GET' && (m = url.match(/^\/v1\/vendors\/([^/]+)$/))) {
+        const claims = verifyToken(bearer(req));
+        return send(res, 200, await vendorDetail(deps.db, claims, m[1]));
       }
 
       if (method === 'GET' && (m = url.match(/^\/v1\/buyers\/([^/]+)\/vendors\/changes$/))) {
