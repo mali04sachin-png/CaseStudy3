@@ -11045,11 +11045,15 @@ async function login(db, email, password) {
 // src/verification/validation.ts
 var GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 var PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+var IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 function isValidGSTIN(value) {
   return GSTIN_REGEX.test(value);
 }
 function isValidPAN(value) {
   return PAN_REGEX.test(value);
+}
+function isValidIFSC(value) {
+  return IFSC_REGEX.test(value);
 }
 
 // src/services/vendors.ts
@@ -11449,6 +11453,89 @@ async function setConnection(db, claims, erp, connect) {
   return rows[0];
 }
 
+// src/services/vendor-kyc.ts
+function ownVendorId(claims) {
+  requireRole(claims, ["VENDOR"]);
+  if (!claims.vendorId) throw new AuthorizationError("No vendor is bound to this token");
+  return claims.vendorId;
+}
+async function submitConsent(db, claims) {
+  const vid = ownVendorId(claims);
+  await db.query(
+    `insert into consent_records (vendor_id, purpose, consent_given_at, consent_manager_ref, is_withdrawn)
+     values ($1, 'Continuous verification & monitoring under DPDP Act 2023', now(), 'cm-app', false)`,
+    [vid]
+  );
+  return { ok: true, consent: "granted" };
+}
+async function submitKyc(db, grvl2, claims, input) {
+  const vid = ownVendorId(claims);
+  const { rows: c } = await db.query(
+    `select 1 from consent_records where vendor_id = $1 and is_withdrawn = false
+       order by consent_given_at desc limit 1`,
+    [vid]
+  );
+  if (!c[0]) throw new ConsentRequiredError("Consent is required before KYC");
+  const gst = (input.gst || "").toUpperCase();
+  const pan = (input.pan || "").toUpperCase();
+  const ifsc = (input.ifsc || "").toUpperCase();
+  if (!isValidGSTIN(gst)) throw new ValidationError("Invalid GSTIN format");
+  if (!isValidPAN(pan)) throw new ValidationError("Invalid PAN format");
+  if (ifsc && !isValidIFSC(ifsc)) throw new ValidationError("Invalid IFSC format");
+  const verified = await grvl2.verifyGSTIN(gst);
+  const status = verified.gstStatus === "ACTIVE" ? "ACTIVE" : "UNVERIFIED";
+  const { rows: pp } = await db.query(
+    `insert into trust_passports
+        (vendor_id, gst_number, pan_number, bank_ifsc, registered_address,
+         msme_classification, status, gst_last_verified_at, updated_at)
+     values ($1,$2,$3,$4,'{}'::jsonb,'NOT_APPLICABLE',$5, now(), now())
+     on conflict (vendor_id) do update
+        set gst_number = excluded.gst_number, pan_number = excluded.pan_number,
+            bank_ifsc = excluded.bank_ifsc, status = excluded.status,
+            gst_last_verified_at = now(), updated_at = now()
+     returning id`,
+    [vid, gst, pan, ifsc || null, status]
+  );
+  await db.query(
+    `insert into verification_records
+        (passport_id, field_name, source_registry, source_provider, verified_value, status)
+     values ($1, 'gst_number', $2, $3, $4, $5)`,
+    [pp[0].id, verified.sourceRegistry, verified.sourceProvider, JSON.stringify(verified.raw), verified.status]
+  );
+  return { ok: true, provider: verified.sourceProvider, gstStatus: verified.gstStatus, status };
+}
+async function withdrawConsent(db, claims) {
+  const vid = ownVendorId(claims);
+  await db.query(
+    `update consent_records set is_withdrawn = true, withdrawn_at = now()
+      where vendor_id = $1 and is_withdrawn = false`,
+    [vid]
+  );
+  await db.query(
+    `update trust_passports
+        set bank_ifsc = null, bank_account_num_encrypted = null,
+            registered_address = '{}'::jsonb, updated_at = now()
+      where vendor_id = $1`,
+    [vid]
+  );
+  return { ok: true, consent: "withdrawn" };
+}
+async function getMyVendor(db, claims) {
+  const vid = ownVendorId(claims);
+  const { rows } = await db.query(
+    `select v.legal_name, p.gst_number, p.pan_number, p.bank_ifsc,
+            p.msme_classification as msme, p.status,
+            (select count(*) > 0 from consent_records c
+               where c.vendor_id = v.id and c.is_withdrawn = false) as has_consent
+       from vendors v
+       left join trust_passports p on p.vendor_id = v.id
+      where v.id = $1`,
+    [vid]
+  );
+  if (!rows[0]) throw new AppError("Vendor not found", 404);
+  return rows[0];
+}
+
 // src/http/server.ts
 var CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
 function applyCors(res) {
@@ -11548,6 +11635,20 @@ async function routeRequest(req, res, deps) {
         if (!claims.vendorId) throw new AuthorizationError("No vendor bound to this token");
         const result = await getVendorReputation(deps.db, claims.vendorId);
         return send(res, 200, result);
+      }
+      if (method === "GET" && url === "/v1/vendor/me") {
+        return send(res, 200, await getMyVendor(deps.db, verifyToken(bearer(req))));
+      }
+      if (method === "POST" && url === "/v1/vendor/consent") {
+        return send(res, 200, await submitConsent(deps.db, verifyToken(bearer(req))));
+      }
+      if (method === "POST" && url === "/v1/vendor/kyc") {
+        const claims = verifyToken(bearer(req));
+        const result = await submitKyc(deps.db, deps.grvl, claims, await readJson(req));
+        return send(res, 200, result);
+      }
+      if (method === "POST" && url === "/v1/vendor/withdraw") {
+        return send(res, 200, await withdrawConsent(deps.db, verifyToken(bearer(req))));
       }
       let m;
       if (method === "POST" && (m = url.match(/^\/v1\/integrations\/([^/]+)\/connect$/))) {

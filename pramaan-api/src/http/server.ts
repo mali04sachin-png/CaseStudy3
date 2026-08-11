@@ -16,6 +16,7 @@ import { bulkVendors, changedVendors, vendorDetail } from '../pull/vendors.ts';
 import { shareProfile } from '../sharing/share.ts';
 import { getVendorReputation } from '../sharing/reputation.ts';
 import { listConnections, setConnection } from '../erp/connections.ts';
+import { submitConsent, submitKyc, withdrawConsent, getMyVendor } from '../services/vendor-kyc.ts';
 import { requireRole } from '../auth/guard.ts';
 import { AppError, AuthenticationError, AuthorizationError } from '../auth/errors.ts';
 import type { GRVL } from '../verification/grvl.ts';
@@ -161,6 +162,22 @@ export async function routeRequest(
         if (!claims.vendorId) throw new AuthorizationError('No vendor bound to this token');
         const result = await getVendorReputation(deps.db, claims.vendorId);
         return send(res, 200, result);
+      }
+
+      // Vendor self-service (Ravi): consent → KYC verify → withdraw.
+      if (method === 'GET' && url === '/v1/vendor/me') {
+        return send(res, 200, await getMyVendor(deps.db, verifyToken(bearer(req))));
+      }
+      if (method === 'POST' && url === '/v1/vendor/consent') {
+        return send(res, 200, await submitConsent(deps.db, verifyToken(bearer(req))));
+      }
+      if (method === 'POST' && url === '/v1/vendor/kyc') {
+        const claims = verifyToken(bearer(req));
+        const result = await submitKyc(deps.db, deps.grvl, claims, await readJson(req));
+        return send(res, 200, result);
+      }
+      if (method === 'POST' && url === '/v1/vendor/withdraw') {
+        return send(res, 200, await withdrawConsent(deps.db, verifyToken(bearer(req))));
       }
 
       let m: RegExpMatchArray | null;
