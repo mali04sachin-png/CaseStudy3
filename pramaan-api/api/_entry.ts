@@ -14,12 +14,36 @@ import { GstinCheckProvider } from '../src/verification/providers/gstincheck.ts'
 // alerts, pull, sharing etc. do not depend on it.
 // Real provider (AppyFlow) as primary when a key is configured; the mock backup
 // stays as the circuit-breaker failover. No key → all-mock (unchanged behavior).
+const realKey = process.env.GSTINCHECK_KEY || process.env.APPYFLOW_KEY;
 const primary = process.env.GSTINCHECK_KEY
   ? new GstinCheckProvider(process.env.GSTINCHECK_KEY)
   : process.env.APPYFLOW_KEY
     ? new AppyFlowProvider(process.env.APPYFLOW_KEY)
     : new MockVerificationProvider({ name: 'eKYCNow' });
-const grvl = new GRVL(primary, new MockVerificationProvider({ name: 'Deepvue' }));
+
+// With a REAL provider, the backup must NOT fabricate an "active" result — if the
+// real API errors/times out we return DEGRADED (unknown), never a fake pass.
+// The real API is slow (~6s), so give the breaker a generous timeout.
+const degradedBackup = {
+  name: 'unavailable',
+  async verifyGSTIN(gstin: string) {
+    return {
+      field: 'gst_number' as const,
+      input: gstin,
+      status: 'DEGRADED' as const,
+      legalName: null,
+      gstStatus: null,
+      registrationDate: null,
+      sourceRegistry: 'GSTN' as const,
+      sourceProvider: 'unavailable',
+      raw: {},
+      verifiedAt: new Date().toISOString(),
+    };
+  },
+};
+const grvl = realKey
+  ? new GRVL(primary, degradedBackup, { timeoutMs: 24000 })
+  : new GRVL(primary, new MockVerificationProvider({ name: 'Deepvue' }));
 
 export default async function handler(req: any, res: any) {
   const path = (req.url || '/').split('?')[0];

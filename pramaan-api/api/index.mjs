@@ -11965,6 +11965,8 @@ var AppyFlowProvider = class {
 };
 
 // src/verification/providers/gstincheck.ts
+var CACHE = /* @__PURE__ */ new Map();
+var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function mapStatus2(sts) {
   if (/active/i.test(sts)) return "ACTIVE";
   if (/cancel/i.test(sts)) return "CANCELLED";
@@ -11977,6 +11979,22 @@ var GstinCheckProvider = class {
   }
   name = "GSTINCheck";
   async verifyGSTIN(gstin) {
+    const cached = CACHE.get(gstin);
+    if (cached) return cached;
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await this.callOnce(gstin);
+        CACHE.set(gstin, result);
+        return result;
+      } catch (e) {
+        lastErr = e;
+        if (attempt < 2) await sleep(700);
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error("GSTINCheck failed");
+  }
+  async callOnce(gstin) {
     const url = "https://sheet.gstincheck.co.in/check/" + encodeURIComponent(this.apiKey) + "/" + encodeURIComponent(gstin);
     const res = await fetch(url);
     const body = await res.json().catch(() => ({}));
@@ -12000,8 +12018,26 @@ var GstinCheckProvider = class {
 };
 
 // api/_entry.ts
+var realKey = process.env.GSTINCHECK_KEY || process.env.APPYFLOW_KEY;
 var primary = process.env.GSTINCHECK_KEY ? new GstinCheckProvider(process.env.GSTINCHECK_KEY) : process.env.APPYFLOW_KEY ? new AppyFlowProvider(process.env.APPYFLOW_KEY) : new MockVerificationProvider({ name: "eKYCNow" });
-var grvl = new GRVL(primary, new MockVerificationProvider({ name: "Deepvue" }));
+var degradedBackup = {
+  name: "unavailable",
+  async verifyGSTIN(gstin) {
+    return {
+      field: "gst_number",
+      input: gstin,
+      status: "DEGRADED",
+      legalName: null,
+      gstStatus: null,
+      registrationDate: null,
+      sourceRegistry: "GSTN",
+      sourceProvider: "unavailable",
+      raw: {},
+      verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+};
+var grvl = realKey ? new GRVL(primary, degradedBackup, { timeoutMs: 24e3 }) : new GRVL(primary, new MockVerificationProvider({ name: "Deepvue" }));
 async function handler(req, res) {
   const path = (req.url || "/").split("?")[0];
   if (req.method === "OPTIONS" || path === "/health" || path === "/") {
