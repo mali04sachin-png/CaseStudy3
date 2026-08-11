@@ -151,6 +151,7 @@
       <button onClick="{{ setTabDash }}" style="{{ tabStyleDash }}">Dashboard</button>
       <button onClick="{{ setTabTax }}" style="{{ tabStyleTax }}">45-Day Tax Filter</button>
       <button onClick="{{ setTabSearch }}" style="{{ tabStyleSearch }}">Vendor Search</button>
+      <button onClick="{{ setTabDiscover }}" style="{{ tabStyleDiscover }}">Discover</button>
       <button onClick="{{ setTabAlerts }}" style="{{ tabStyleAlerts }}">Alerts <span style="{{ alertsCountPillStyle }}">{{ openAlertsCount }}</span></button>
     </div>
   </sc-if>
@@ -263,6 +264,31 @@
               </div>
               <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8890a0;margin-top:6px;">{{ v.gst }} · {{ v.pan }}</div>
               <div style="font-size:12px;color:#565f6f;margin-top:8px;">Last checked: <strong style="color:#12151c;">{{ v.lastChecked }}</strong></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= PRIYA: DISCOVER ================= -->
+    <sc-if value="{{ isPriyaDiscover }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Priya Discover Vendors">
+        <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">Discover verified vendors</h1>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 18px;max-width:680px;">Vendors already verified and trusted by Pramaan through other buyers. Onboard the ones you need in one click — their trust passport is reused, so your team does zero re-verification.</p>
+        <input value="{{ directoryQuery }}" onChange="{{ onDirectoryChange }}" placeholder="Search verified vendors by name or GST…" style="width:100%;max-width:480px;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:18px;outline:none;" />
+        <div style="font-size:12px;color:#8890a0;margin-bottom:10px;">{{ directoryLabel }}</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+          <sc-for list="{{ directoryVendors }}" as="v" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:16px 18px;">
+              <div style="display:flex;justify-content:space-between;align-items:start;">
+                <div style="font-weight:600;font-size:14px;">{{ v.name }}</div>
+                <span style="font-size:11px;font-weight:700;color:#0f7a5c;">✓ Pramaan-verified</span>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8890a0;margin-top:6px;">{{ v.gst }} · {{ v.msme }}</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+                <div style="font-size:12px;color:#565f6f;">Trust score <strong style="color:#12151c;font-family:'IBM Plex Mono',monospace;">{{ v.reputation }}/100</strong></div>
+                <button onClick="{{ v.onboard }}" style="{{ v.onboardStyle }}">{{ v.onboardLabel }}</button>
+              </div>
             </div>
           </sc-for>
         </div>
@@ -750,6 +776,10 @@ async function loadBuyerData(self) {
   }
 }
 
+async function loadDirectory(self, q) {
+  const r = await apiFetch("/v1/directory/vendors" + (q && q.trim() ? "?q=" + encodeURIComponent(q.trim()) : ""));
+  self.setState({ directoryResults: (r.data && r.data.vendors) || [] });
+}
 function stopPolling() { if (POLL) { clearInterval(POLL); POLL = null; } }
 function startPolling(self) {
   stopPolling();
@@ -775,6 +805,8 @@ class Component extends DCLogic {
     persona: "priya",
     priyaTab: "dashboard",
     searchQuery: "",
+    directoryQuery: "",
+    directoryResults: [],
     dashMsmeFilter: "all",
     dashAttentionOnly: false,
     selectedVendorId: null,
@@ -962,6 +994,23 @@ class Component extends DCLogic {
 
       setTabDash: () => this.setState({ priyaTab: "dashboard" }), setTabTax: () => this.setState({ priyaTab: "tax" }),
       setTabSearch: () => this.setState({ priyaTab: "search" }), setTabAlerts: () => this.setState({ priyaTab: "alerts" }),
+      setTabDiscover: () => { this.setState({ priyaTab: "discover" }); loadDirectory(this, this.state.directoryQuery); },
+      tabStyleDiscover: stylize(tabBtn("discover", this.state.priyaTab === "discover")),
+      isPriyaDiscover: persona === "priya" && this.state.priyaTab === "discover",
+      directoryQuery: this.state.directoryQuery,
+      onDirectoryChange: (e) => { this.setState({ directoryQuery: e.target.value }); loadDirectory(this, e.target.value); },
+      directoryLabel: this.state.directoryResults.length + " verified vendor(s) available to onboard",
+      directoryVendors: this.state.directoryResults.map((v) => ({
+        name: v.legal_name, gst: v.gst_number, msme: (MSME_LABEL[v.msme] || v.msme || ""), reputation: v.reputation,
+        onboardLabel: v.already_onboarded ? "✓ Onboarded" : "Onboard",
+        onboardStyle: stylize({ background: v.already_onboarded ? "#eef0f3" : "#12182b", color: v.already_onboarded ? "#8890a0" : "#fff", border: "none", padding: "8px 14px", "border-radius": "7px", "font-size": "12.5px", "font-weight": 600, cursor: v.already_onboarded ? "default" : "pointer", "font-family": "inherit" }),
+        onboard: () => {
+          if (v.already_onboarded) return;
+          apiFetch("/v1/directory/vendors/" + v.vendor_id + "/onboard", { method: "POST" }).then((r) => {
+            if (r.status === 201 || r.status === 200) { loadDirectory(this, this.state.directoryQuery); loadBuyerData(this); }
+          });
+        }
+      })),
       tabStyleDash: stylize(tabBtn("dashboard", this.state.priyaTab === "dashboard")),
       tabStyleTax: stylize(tabBtn("tax", this.state.priyaTab === "tax")),
       tabStyleSearch: stylize(tabBtn("search", this.state.priyaTab === "search")),
