@@ -8,14 +8,17 @@ import { getPool } from '../src/db/pool.ts';
 import { GRVL } from '../src/verification/grvl.ts';
 import { MockVerificationProvider } from '../src/verification/providers/mock-provider.ts';
 import { AppyFlowProvider } from '../src/verification/providers/appyflow.ts';
+import { GstinCheckProvider } from '../src/verification/providers/gstincheck.ts';
 
 // Verification uses mock providers until real GST/PAN API keys are added; login,
 // alerts, pull, sharing etc. do not depend on it.
 // Real provider (AppyFlow) as primary when a key is configured; the mock backup
 // stays as the circuit-breaker failover. No key → all-mock (unchanged behavior).
-const primary = process.env.APPYFLOW_KEY
-  ? new AppyFlowProvider(process.env.APPYFLOW_KEY)
-  : new MockVerificationProvider({ name: 'eKYCNow' });
+const primary = process.env.GSTINCHECK_KEY
+  ? new GstinCheckProvider(process.env.GSTINCHECK_KEY)
+  : process.env.APPYFLOW_KEY
+    ? new AppyFlowProvider(process.env.APPYFLOW_KEY)
+    : new MockVerificationProvider({ name: 'eKYCNow' });
 const grvl = new GRVL(primary, new MockVerificationProvider({ name: 'Deepvue' }));
 
 export default async function handler(req: any, res: any) {

@@ -11964,8 +11964,43 @@ var AppyFlowProvider = class {
   }
 };
 
+// src/verification/providers/gstincheck.ts
+function mapStatus2(sts) {
+  if (/active/i.test(sts)) return "ACTIVE";
+  if (/cancel/i.test(sts)) return "CANCELLED";
+  if (/suspend|provisional|inactive/i.test(sts)) return "SUSPENDED";
+  return null;
+}
+var GstinCheckProvider = class {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+  }
+  name = "GSTINCheck";
+  async verifyGSTIN(gstin) {
+    const url = "https://sheet.gstincheck.co.in/check/" + encodeURIComponent(this.apiKey) + "/" + encodeURIComponent(gstin);
+    const res = await fetch(url);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.flag === false || !body.data && !body.lgnm) {
+      throw new Error(body && body.message ? String(body.message) : `GSTINCheck HTTP ${res.status}`);
+    }
+    const info = body.data || body;
+    return {
+      field: "gst_number",
+      input: gstin,
+      status: "VALID",
+      legalName: info.lgnm || info.tradeNam || null,
+      gstStatus: mapStatus2(String(info.sts || "")),
+      registrationDate: info.rgdt || null,
+      sourceRegistry: "GSTN",
+      sourceProvider: this.name,
+      raw: body,
+      verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+};
+
 // api/_entry.ts
-var primary = process.env.APPYFLOW_KEY ? new AppyFlowProvider(process.env.APPYFLOW_KEY) : new MockVerificationProvider({ name: "eKYCNow" });
+var primary = process.env.GSTINCHECK_KEY ? new GstinCheckProvider(process.env.GSTINCHECK_KEY) : process.env.APPYFLOW_KEY ? new AppyFlowProvider(process.env.APPYFLOW_KEY) : new MockVerificationProvider({ name: "eKYCNow" });
 var grvl = new GRVL(primary, new MockVerificationProvider({ name: "Deepvue" }));
 async function handler(req, res) {
   const path = (req.url || "/").split("?")[0];
