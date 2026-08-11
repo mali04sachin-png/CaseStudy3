@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes pramaan-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(1.6); } }
+  @keyframes pramaan-spin { to { transform: rotate(360deg); } }
+  a { color: #1e5f8c; }
+  a:hover { color: #164a6e; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#f5f6f8;font-family:'IBM Plex Sans',sans-serif;color:#12151c;display:flex;flex-direction:column;">
+
+  <!-- LOGIN -->
+  <sc-if value="{{ isLoginScreen }}" hint-placeholder-val="{{ true }}">
+    <div style="min-height:100vh;display:flex;background:#f5f6f8;">
+      <div style="width:420px;flex-shrink:0;background:linear-gradient(165deg,#0d1326 0%,#141b33 100%);color:#fff;padding:48px 40px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="position:relative;width:22px;height:22px;flex-shrink:0;">
+              <div style="position:absolute;inset:0;border-radius:50%;border:1.5px solid #4fd1a5;"></div>
+              <div style="position:absolute;inset:5px;border-radius:50%;background:#4fd1a5;"></div>
+            </div>
+            <div style="font-weight:700;font-size:18px;letter-spacing:0.2px;">Pramaan</div>
+          </div>
+          <div style="margin-top:56px;font-size:27px;font-weight:700;line-height:1.35;">Verify once.<br/>Onboard fast.<br/>Trust always.</div>
+          <div style="margin-top:16px;font-size:13.5px;color:#9aa7c7;line-height:1.65;max-width:300px;">Government-backed vendor verification for procurement teams — checked once, watched continuously, every day after.</div>
+        </div>
+        <div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:28px;">
+            <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#c3cbe0;"><span style="width:6px;height:6px;border-radius:50%;background:#4fd1a5;flex-shrink:0;"></span>Trust Passport created &amp; consented</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#c3cbe0;"><span style="width:6px;height:6px;border-radius:50%;background:#4fd1a5;flex-shrink:0;"></span>Verified against GST, PAN &amp; MSME registries</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#c3cbe0;"><span style="width:6px;height:6px;border-radius:50%;background:#4fd1a5;flex-shrink:0;"></span>Watched continuously, alerts routed instantly</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:#c3cbe0;"><span style="width:6px;height:6px;border-radius:50%;background:#4fd1a5;flex-shrink:0;"></span>Synced natively into Oracle &amp; SAP</div>
+          </div>
+          <div style="border-top:1px solid #262f47;padding-top:16px;font-size:11px;color:#5c6a8c;">© 2026 Pramaan Technologies · DPDP Act, 2023 compliant · Enterprise SSO ready</div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px;">
+      <div style="width:400px;max-width:100%;">
+        <sc-if value="{{ isAuthLogin }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Sign in to Pramaan</div>
+          <div style="font-size:13px;color:#8890a0;margin-bottom:26px;">Enterprise vendor verification &amp; monitoring platform</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:8px;">Select your role</div>
+          <div style="display:flex;gap:8px;margin-bottom:20px;">
+            <div onClick="{{ pickPriyaRole }}" style="{{ loginTilePriyaStyle }}"><div style="font-weight:600;font-size:13px;color:{{ loginTilePriyaTextColor }};">Buyer</div><div style="font-size:11px;color:{{ loginTilePriyaSubColor }};margin-top:2px;">Compliance Lead</div></div>
+            <div onClick="{{ pickRaviRole }}" style="{{ loginTileRaviStyle }}"><div style="font-weight:600;font-size:13px;color:{{ loginTileRaviTextColor }};">Vendor</div><div style="font-size:11px;color:{{ loginTileRaviSubColor }};margin-top:2px;">Supplier</div></div>
+            <div onClick="{{ pickAnanyaRole }}" style="{{ loginTileAnanyaStyle }}"><div style="font-weight:600;font-size:13px;color:{{ loginTileAnanyaTextColor }};">IT Lead</div><div style="font-size:11px;color:{{ loginTileAnanyaSubColor }};margin-top:2px;">Systems Admin</div></div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:#40485a;display:block;margin-bottom:6px;">Username</label>
+            <input value="{{ loginUsername }}" onChange="{{ onLoginUsernameChange }}" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:12px;font-weight:600;color:#40485a;display:block;margin-bottom:6px;">Password</label>
+            <input type="password" value="{{ loginPassword }}" onChange="{{ onLoginPasswordChange }}" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <div style="font-size:11px;color:#8890a0;margin-bottom:16px;">Demo credentials are pre-filled for the selected role.</div>
+          <sc-if value="{{ loginError }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12px;color:#b3261e;background:#fdf1f0;border:1px solid #f2c9c5;border-radius:7px;padding:9px 12px;margin-bottom:14px;">{{ loginError }}</div>
+          </sc-if>
+          <sc-if value="{{ loggingIn }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;color:#565f6f;font-size:13.5px;">
+              <div style="width:16px;height:16px;border-radius:50%;border:2px solid #e2e5ea;border-top-color:#1e5f8c;animation:pramaan-spin 0.8s linear infinite;"></div>
+              Signing in…
+            </div>
+          </sc-if>
+          <button onClick="{{ doLogin }}" disabled="{{ loggingIn }}" style="width:100%;background:#12182b;color:#fff;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;opacity:{{ loginButtonOpacity }};">Sign in</button>
+          <div style="display:flex;justify-content:space-between;margin-top:14px;">
+            <a href="#" onClick="{{ goToForgot }}" style="font-size:12px;">Forgot password?</a>
+            <a href="#" onClick="{{ goToRegister }}" style="font-size:12px;">Don't have an account? Register</a>
+          </div>
+          <div style="font-size:11px;color:#8890a0;margin-top:14px;text-align:center;">Your role is fixed for this session once signed in.</div>
+        </sc-if>
+
+        <sc-if value="{{ isAuthRegister }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Create your account</div>
+          <div style="font-size:13px;color:#8890a0;margin-bottom:26px;">Set up access to Pramaan for your organization</div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:8px;">Your role</div>
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <div onClick="{{ pickRegPriya }}" style="{{ regTilePriyaStyle }}"><div style="font-weight:600;font-size:13px;color:{{ regTilePriyaTextColor }};">Buyer</div><div style="font-size:11px;color:{{ regTilePriyaSubColor }};margin-top:2px;">Compliance Lead</div></div>
+            <div onClick="{{ pickRegRavi }}" style="{{ regTileRaviStyle }}"><div style="font-weight:600;font-size:13px;color:{{ regTileRaviTextColor }};">Vendor</div><div style="font-size:11px;color:{{ regTileRaviSubColor }};margin-top:2px;">Supplier</div></div>
+            <div onClick="{{ pickRegAnanya }}" style="{{ regTileAnanyaStyle }}"><div style="font-weight:600;font-size:13px;color:{{ regTileAnanyaTextColor }};">IT Lead</div><div style="font-size:11px;color:{{ regTileAnanyaSubColor }};margin-top:2px;">Systems Admin</div></div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <input value="{{ registerName }}" onChange="{{ onRegisterNameChange }}" placeholder="Full name" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <input value="{{ registerEmail }}" onChange="{{ onRegisterEmailChange }}" placeholder="Work email" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <div style="margin-bottom:12px;">
+            <input value="{{ registerOrg }}" onChange="{{ onRegisterOrgChange }}" placeholder="Company name" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <div style="margin-bottom:18px;">
+            <input type="password" value="{{ registerPassword }}" onChange="{{ onRegisterPasswordChange }}" placeholder="Password (min 6 characters)" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <button disabled="{{ registerCannotSubmit }}" onClick="{{ doRegister }}" style="width:100%;background:#12182b;color:#fff;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Create account</button>
+          <div style="margin-top:14px;text-align:center;"><a href="#" onClick="{{ goToLogin }}" style="font-size:12px;">Already have an account? Sign in</a></div>
+        </sc-if>
+
+        <sc-if value="{{ isAuthForgot }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:22px;font-weight:700;margin-bottom:6px;">Reset your password</div>
+          <div style="font-size:13px;color:#8890a0;margin-bottom:26px;">We'll email you a secure link</div>
+          <sc-if value="{{ forgotSent }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13px;color:#0f7a5c;background:#eefaf4;border-radius:8px;padding:14px;margin-bottom:16px;">If an account exists for that email, a reset link has been sent.</div>
+          </sc-if>
+          <div style="margin-bottom:18px;">
+            <input value="{{ forgotEmail }}" onChange="{{ onForgotEmailChange }}" placeholder="Your work email" style="width:100%;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:13.5px;font-family:inherit;outline:none;" />
+          </div>
+          <button disabled="{{ forgotCannotSubmit }}" onClick="{{ doForgotSubmit }}" style="width:100%;background:#12182b;color:#fff;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Send reset link</button>
+          <div style="margin-top:14px;text-align:center;"><a href="#" onClick="{{ goToLogin }}" style="font-size:12px;">Back to sign in</a></div>
+        </sc-if>
+      </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+  <!-- TOP BAR -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:#12182b;border-bottom:1px solid #262f47;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="position:relative;width:22px;height:22px;flex-shrink:0;">
+        <div style="position:absolute;inset:0;border-radius:50%;border:1.5px solid #4fd1a5;"></div>
+        <div style="position:absolute;inset:5px;border-radius:50%;background:#4fd1a5;"></div>
+        <div style="position:absolute;inset:0;border-radius:50%;border:1.5px solid #4fd1a5;animation:pramaan-pulse 2.4s ease-out infinite;"></div>
+      </div>
+      <div style="color:#f4f6fa;font-weight:700;font-size:18px;letter-spacing:0.2px;">Pramaan</div>
+      <div style="color:#7c8aab;font-size:12px;border-left:1px solid #333e5c;padding-left:12px;">Verify once. Onboard fast. Trust always.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:18px;">
+      <div style="background:#1b2440;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:600;color:#fff;">{{ loginPersonRoleLabel }}</div>
+      <button onClick="{{ toggleGaps }}" style="background:none;border:1px solid #333e5c;color:#9aa7c7;font-size:12px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:inherit;">Scope &amp; open questions</button>
+      <button onClick="{{ signOut }}" style="background:none;border:1px solid #333e5c;color:#9aa7c7;font-size:12px;padding:8px 12px;border-radius:7px;cursor:pointer;font-family:inherit;">Sign out</button>
+    </div>
+  </div>
+
+  <!-- PERSONA SUB-NAV -->
+  <sc-if value="{{ isPriya }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;gap:4px;padding:0 28px;background:#fff;border-bottom:1px solid #e2e5ea;">
+      <button onClick="{{ setTabDash }}" style="{{ tabStyleDash }}">Dashboard</button>
+      <button onClick="{{ setTabTax }}" style="{{ tabStyleTax }}">45-Day Tax Filter</button>
+      <button onClick="{{ setTabSearch }}" style="{{ tabStyleSearch }}">Vendor Search</button>
+      <button onClick="{{ setTabAlerts }}" style="{{ tabStyleAlerts }}">Alerts <span style="{{ alertsCountPillStyle }}">{{ openAlertsCount }}</span></button>
+    </div>
+  </sc-if>
+
+  <!-- MAIN CONTENT -->
+  <div style="flex:1;padding:32px;max-width:1240px;width:100%;margin:0 auto;">
+
+    <!-- ================= PRIYA: DASHBOARD ================= -->
+    <sc-if value="{{ isPriyaDash }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Priya Dashboard">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;">
+          <h1 style="font-size:24px;font-weight:700;margin:0;">One screen, already sorted</h1>
+          <div style="font-size:12px;color:#6b7280;">Logged in as <strong style="color:#12151c;">Priya Menon</strong> · Initech Manufacturing Ltd</div>
+        </div>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 22px;max-width:640px;">Every vendor connected from your ERP, sorted by what needs your attention today — not spread across three tools.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:26px;">
+          <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:16px 18px;">
+            <div style="font-size:11px;color:#8890a0;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Onboarding time</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#0f7a5c;">~1 day</div>
+            <div style="font-size:11px;color:#8890a0;margin-top:2px;">down from ~12 days before Pramaan</div>
+          </div>
+          <div onClick="{{ toggleAttentionOnly }}" style="{{ attentionCardStyle }}">
+            <div style="font-size:11px;color:#8890a0;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Needs attention</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#b3261e;">{{ needsAttentionCount }}</div>
+            <div style="font-size:11px;color:#8890a0;margin-top:2px;">{{ attentionCardHint }}</div>
+          </div>
+          <div onClick="{{ setTabTax }}" style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:16px 18px;cursor:pointer;" style-hover="border-color:#b7c0cf;">
+            <div style="font-size:11px;color:#8890a0;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Tax filings &lt;45 days</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#a5670f;">{{ atRiskTaxCount }}</div>
+            <div style="font-size:11px;color:#8890a0;margin-top:2px;">vendors to nudge this cycle →</div>
+          </div>
+          <div style="background:#101a33;border:1px solid #101a33;border-radius:10px;padding:16px 18px;">
+            <div style="font-size:11px;color:#8fa3d6;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Still watching</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;color:#4fd1a5;">37 changes</div>
+            <div style="font-size:11px;color:#8fa3d6;margin-top:2px;">caught automatically this month</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <sc-for list="{{ msmeChips }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.select }}" style="{{ c.style }}">{{ c.label }} <span style="{{ c.countStyle }}">{{ c.count }}</span></button>
+            </sc-for>
+          </div>
+          <div style="font-size:12px;color:#8890a0;">{{ dashVendorCountLabel }}</div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 1fr;gap:8px;padding:10px 18px;background:#f8f9fb;border-bottom:1px solid #e2e5ea;font-size:11px;color:#8890a0;text-transform:uppercase;letter-spacing:0.05em;">
+            <div>Vendor</div><div>GST / PAN</div><div>Government check</div><div>Tax deadline</div><div>Consent</div>
+          </div>
+          <sc-for list="{{ dashVendors }}" as="v" hint-placeholder-count="10">
+            <div onClick="{{ v.select }}" style="display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 1fr;gap:8px;padding:13px 18px;border-bottom:1px solid #eef0f3;cursor:pointer;align-items:center;" style-hover="background:#fafbfc;">
+              <div>
+                <div style="font-weight:600;font-size:13.5px;">{{ v.name }}</div>
+                <div style="font-size:11px;color:{{ v.riskColor }};margin-top:2px;">{{ v.riskLabel }}</div>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#565f6f;">{{ v.gst }}</div>
+              <div><span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:{{ v.statusColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ v.statusColor }};display:inline-block;"></span>{{ v.statusLabel }}</span></div>
+              <div style="font-size:12.5px;color:{{ v.taxColor }};">{{ v.taxLabel }}</div>
+              <div style="font-size:12.5px;color:{{ v.consentColor }};">{{ v.consentLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= PRIYA: 45-DAY TAX FILTER ================= -->
+    <sc-if value="{{ isPriyaTax }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Priya Tax Deadline View">
+        <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">45-day tax filter — Section 43B(h)</h1>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 22px;max-width:640px;">Every Micro or Small vendor inside the 45-day MSME payment window, with the exact number of days left. Medium enterprises are excluded — 43B(h) doesn't apply to them.</p>
+
+        <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1.4fr 1fr;gap:8px;padding:10px 18px;background:#f8f9fb;border-bottom:1px solid #e2e5ea;font-size:11px;color:#8890a0;text-transform:uppercase;letter-spacing:0.05em;">
+            <div>Vendor</div><div>GST</div><div>Days remaining</div><div>Risk</div>
+          </div>
+          <sc-for list="{{ atRiskVendors }}" as="v" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:2fr 1fr 1.4fr 1fr;gap:8px;padding:14px 18px;border-bottom:1px solid #eef0f3;align-items:center;">
+              <div style="font-weight:600;font-size:13.5px;">{{ v.name }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#565f6f;">{{ v.gst }}</div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="flex:1;height:6px;background:#eef0f3;border-radius:3px;overflow:hidden;max-width:120px;">
+                  <div style="height:100%;background:{{ v.urgencyColor }};width:{{ v.urgencyPct }};"></div>
+                </div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:{{ v.urgencyColor }};">{{ v.daysLabel }}</span>
+              </div>
+              <div style="font-size:12px;color:{{ v.riskColor }};">{{ v.riskLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin-top:14px;font-size:12px;color:#8890a0;">Days remaining = 45 − (today − invoice date). At 0 days the invoice is locked from the normal payment queue and flagged as a 43B(h) breach — this countdown isn't configurable in the MVP.</div>
+      </div>
+    </sc-if>
+
+    <!-- ================= PRIYA: VENDOR SEARCH ================= -->
+    <sc-if value="{{ isPriyaSearch }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Priya Vendor Search">
+        <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">Vendor search</h1>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 18px;max-width:640px;">What used to take days of chasing paperwork now takes seconds.</p>
+        <input value="{{ searchQuery }}" onChange="{{ onSearchChange }}" placeholder="Search by vendor name, GST or PAN…" style="width:100%;max-width:480px;padding:11px 14px;border:1px solid #d7dbe3;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:18px;outline:none;" />
+        <div style="font-size:12px;color:#8890a0;margin-bottom:10px;">{{ searchResultLabel }}</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+          <sc-for list="{{ filteredVendors }}" as="v" hint-placeholder-count="6">
+            <div onClick="{{ v.select }}" style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:16px 18px;cursor:pointer;" style-hover="border-color:#b7c0cf;">
+              <div style="display:flex;justify-content:space-between;align-items:start;">
+                <div style="font-weight:600;font-size:14px;">{{ v.name }}</div>
+                <span style="font-size:11px;font-weight:600;color:{{ v.statusColor }};">{{ v.statusLabel }}</span>
+              </div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#8890a0;margin-top:6px;">{{ v.gst }} · {{ v.pan }}</div>
+              <div style="font-size:12px;color:#565f6f;margin-top:8px;">Last checked: <strong style="color:#12151c;">{{ v.lastChecked }}</strong></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= PRIYA: ALERTS ================= -->
+    <sc-if value="{{ isPriyaAlerts }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Priya Alerts">
+        <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">Alerts &amp; audit trail</h1>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 22px;max-width:660px;">Big changes always reach you. Small ones — like an address update — are logged quietly and don't interrupt you.</p>
+
+        <sc-if value="{{ hasSelectedAlert }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fff;border:2px solid {{ selectedAlert.materialityColor }};border-radius:12px;padding:26px;margin-bottom:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:start;">
+              <div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:{{ selectedAlert.materialityColor }};margin-bottom:6px;">{{ selectedAlert.materialityLabel }} severity</div>
+                <div style="font-size:19px;font-weight:700;">{{ selectedAlert.vendorName }}</div>
+                <div style="font-size:14px;color:#40485a;margin-top:4px;">{{ selectedAlert.description }}</div>
+              </div>
+              <button onClick="{{ closeAlert }}" style="background:none;border:none;color:#8890a0;font-size:13px;cursor:pointer;font-family:inherit;">Close</button>
+            </div>
+            <div style="display:flex;gap:22px;margin-top:16px;font-size:12px;color:#8890a0;">
+              <div>Detected: <strong style="color:#12151c;">{{ selectedAlert.timestamp }}</strong></div>
+              <div>Routed to: <strong style="color:#12151c;">{{ selectedAlert.routedTo }}</strong></div>
+            </div>
+            <div style="margin-top:20px;">
+              <sc-if value="{{ selectedAlert.isHeld }}" hint-placeholder-val="{{ false }}">
+                <div style="display:inline-flex;align-items:center;gap:8px;background:#eefaf4;color:#0f7a5c;padding:11px 18px;border-radius:8px;font-size:13.5px;font-weight:600;">✓ Payment held — logged permanently to the audit trail</div>
+              </sc-if>
+              <sc-if value="{{ selectedAlert.isOpen }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ selectedAlert.hold }}" style="background:#b3261e;color:#fff;border:none;padding:13px 24px;border-radius:8px;font-size:14.5px;font-weight:600;cursor:pointer;font-family:inherit;">{{ selectedAlert.actionLabel }}</button>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:10px;">Requires your decision — Critical &amp; High severity</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+          <sc-for list="{{ highAlerts }}" as="a" hint-placeholder-count="3">
+            <div onClick="{{ a.select }}" style="background:#fff;border:1px solid #f2c9c5;border-left:4px solid {{ a.materialityColor }};border-radius:8px;padding:14px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:10px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#fff;background:{{ a.materialityColor }};padding:2px 7px;border-radius:4px;">{{ a.materialityLabel }}</span>
+                  <div style="font-weight:600;font-size:13.5px;">{{ a.vendorName }}</div>
+                </div>
+                <div style="font-size:12.5px;color:#565f6f;margin-top:4px;">{{ a.description }}</div>
+                <div style="font-size:11px;color:#8890a0;margin-top:2px;">Routed to: {{ a.routedTo }}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px;color:#8890a0;">{{ a.timestamp }}</div>
+                <div style="font-size:11.5px;font-weight:600;color:{{ a.statusColor }};margin-top:2px;">{{ a.statusLabel }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:10px;">Flagged for review — Medium severity</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:28px;">
+          <sc-for list="{{ mediumAlerts }}" as="a" hint-placeholder-count="2">
+            <div onClick="{{ a.select }}" style="background:#fff;border:1px solid #f2e0b8;border-left:4px solid {{ a.materialityColor }};border-radius:8px;padding:12px 18px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:12.5px;color:#40485a;"><strong>{{ a.vendorName }}</strong> — {{ a.description }} <span style="color:#8890a0;">· routed to {{ a.routedTo }}</span></div>
+              <div style="font-size:11px;color:#8890a0;">{{ a.timestamp }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:10px;">Logged quietly (no alert sent)</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ lowAlerts }}" as="a" hint-placeholder-count="2">
+            <div style="background:#fbfbfc;border:1px solid #eef0f3;border-radius:8px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;color:#8890a0;">
+              <div style="font-size:12.5px;"><strong style="color:#565f6f;">{{ a.vendorName }}</strong> — {{ a.description }}</div>
+              <div style="font-size:11px;">{{ a.timestamp }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ================= RAVI: ONBOARDING WIZARD ================= -->
+    <sc-if value="{{ isRavi }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Ravi Onboarding" style="max-width:560px;margin:0 auto;">
+        <div style="display:flex;gap:6px;margin-bottom:28px;">
+          <div style="flex:1;height:4px;border-radius:2px;background:{{ raviBarColor0 }};"></div>
+          <div style="flex:1;height:4px;border-radius:2px;background:{{ raviBarColor1 }};"></div>
+          <div style="flex:1;height:4px;border-radius:2px;background:{{ raviBarColor2 }};"></div>
+          <div style="flex:1;height:4px;border-radius:2px;background:{{ raviBarColor3 }};"></div>
+        </div>
+
+        <sc-if value="{{ raviStepIs0 }}" hint-placeholder-val="{{ true }}">
+          <h1 style="font-size:22px;font-weight:700;margin:0 0 8px;">Before we check anything</h1>
+          <p style="color:#565f6f;font-size:14.5px;line-height:1.55;margin:0 0 18px;">Bharat Freight Solutions is being invited onto Pramaan by <strong>Initech Manufacturing Ltd</strong>. Nothing gets checked, and no government record gets touched, until you agree. Under the DPDP Act, 2023, here is exactly what that means:</p>
+
+          <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:18px 20px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:10px;">What Pramaan will check, once</div>
+            <ul style="margin:0;padding-left:18px;font-size:13.5px;color:#40485a;line-height:1.7;">
+              <li>GST registration status and number, against GSTN</li>
+              <li>PAN, against the Income Tax / Protean database</li>
+              <li>MSME / Udyam classification, against the Udyam registry</li>
+              <li>Bank account and IFSC you provide next — kept as your claim, not auto-verified in this MVP</li>
+            </ul>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:18px 20px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:10px;">Who sees the result</div>
+            <ul style="margin:0;padding-left:18px;font-size:13.5px;color:#40485a;line-height:1.7;">
+              <li>Only <strong>Initech Manufacturing Ltd</strong>, the buyer inviting you, sees your verified profile today</li>
+              <li>Any buyer who invites you later sees the same verified profile — you won't re-upload anything</li>
+              <li>No buyer ever sees another buyer's private notes about you, and you never see another vendor's data</li>
+            </ul>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:18px 20px;margin-bottom:16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:10px;">What happens to your consent record</div>
+            <ul style="margin:0;padding-left:18px;font-size:13.5px;color:#40485a;line-height:1.7;">
+              <li>This consent is timestamped, given a permanent reference ID, and written to an audit log that can't be edited or deleted</li>
+              <li>Pramaan re-checks your records on a schedule afterward — you won't be asked to consent again for routine re-checks</li>
+              <li>You can withdraw consent anytime ("Right to Erase") — your bank details and address are wiped immediately; GST/PAN and the audit trail are kept, anonymized, for tax-audit purposes</li>
+              <li>No fee is ever charged to you — the buyer inviting you covers the verification cost</li>
+            </ul>
+          </div>
+
+          <label style="display:flex;gap:12px;align-items:start;background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:18px;cursor:pointer;margin-bottom:20px;">
+            <input type="checkbox" checked="{{ raviConsent }}" onChange="{{ toggleConsent }}" style="margin-top:2px;width:16px;height:16px;" />
+            <span style="font-size:13.5px;color:#40485a;line-height:1.5;">I have read the above and consent to Pramaan checking my GST, PAN and MSME/Udyam status against official government records, for the purpose of B2B vendor verification, and sharing the verified result with buyers I choose to work with.</span>
+          </label>
+          <button disabled="{{ raviCannotContinue }}" onClick="{{ raviNext }}" style="{{ raviContinueStyle }}">Continue</button>
+        </sc-if>
+
+        <sc-if value="{{ raviStepIs1 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="font-size:22px;font-weight:700;margin:0 0 6px;">Your details, once</h1>
+          <p style="color:#565f6f;font-size:14px;margin:0 0 22px;">Every buyer who invites you after this sees the same verified profile — you won't fill this in again.</p>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;font-weight:600;color:#40485a;display:block;margin-bottom:6px;">GST Number</label>
+            <input value="{{ raviGst }}" onChange="{{ onGstChange }}" placeholder="22AAAAA0000A1Z5" style="{{ raviGstInputStyle }}" />
+            <div style="font-size:11.5px;margin-top:5px;color:{{ raviGstHintColor }};">{{ raviGstHint }}</div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;font-weight:600;color:#40485a;display:block;margin-bottom:6px;">PAN</label>
+            <input value="{{ raviPan }}" onChange="{{ onPanChange }}" placeholder="AAAAA0000A" style="{{ raviPanInputStyle }}" />
+            <div style="font-size:11.5px;margin-top:5px;color:{{ raviPanHintColor }};">{{ raviPanHint }}</div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;font-weight:600;color:#40485a;display:block;margin-bottom:6px;">Bank Account Number</label>
+            <input value="{{ raviBank }}" onChange="{{ onBankChange }}" placeholder="9-18 digits" style="{{ raviBankInputStyle }}" />
+            <div style="font-size:11.5px;margin-top:5px;color:{{ raviBankHintColor }};">{{ raviBankHint }}</div>
+          </div>
+          <div style="margin-bottom:24px;">
+            <label style="font-size:12px;font-weight:600;color:#40485a;display:block;margin-bottom:6px;">IFSC Code</label>
+            <input value="{{ raviIfsc }}" onChange="{{ onIfscChange }}" placeholder="HDFC0001234" style="{{ raviIfscInputStyle }}" />
+            <div style="font-size:11.5px;margin-top:5px;color:{{ raviIfscHintColor }};">{{ raviIfscHint }}</div>
+          </div>
+          <div style="font-size:11.5px;color:#8890a0;margin-bottom:16px;">What you type here is treated as a claim, not a fact — Pramaan checks the format before spending anything on a government lookup, then confirms it against the real record.</div>
+          <button disabled="{{ raviCannotSubmit }}" onClick="{{ raviSubmit }}" style="{{ raviContinueStyle }}">Check with government records</button>
+        </sc-if>
+
+        <sc-if value="{{ raviStepIs2 }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:60px 0;">
+            <div style="width:44px;height:44px;border-radius:50%;border:3px solid #e2e5ea;border-top-color:#1e5f8c;margin:0 auto 22px;animation:pramaan-spin 0.9s linear infinite;"></div>
+            <h1 style="font-size:19px;font-weight:700;margin:0 0 8px;">Checking with government registries…</h1>
+            <p style="color:#8890a0;font-size:13.5px;margin:0 0 14px;">Like a passport scan at the airport. If a registry is down, Pramaan waits and retries — it never guesses.</p>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#565f6f;text-align:left;max-width:340px;margin:0 auto;white-space:pre-line;line-height:1.6;">{{ raviCheckLog }}</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ raviStepIs3 }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="width:48px;height:48px;border-radius:50%;background:#eefaf4;color:#0f7a5c;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 14px;">✓</div>
+            <h1 style="font-size:21px;font-weight:700;margin:0 0 6px;">Trust Passport created</h1>
+            <p style="color:#565f6f;font-size:13.5px;margin:0;">Matches current government records — this is a status, not a guarantee.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:22px;">
+            <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid #e2e5ea;border-radius:8px;padding:12px 16px;"><span style="font-size:13px;color:#40485a;">GST</span><span style="font-size:12px;font-weight:600;color:#0f7a5c;">✓ Verified via AuthBridge (backup — eKYCNow timed out)</span></div>
+            <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid #e2e5ea;border-radius:8px;padding:12px 16px;"><span style="font-size:13px;color:#40485a;">PAN</span><span style="font-size:12px;font-weight:600;color:#0f7a5c;">✓ Government-verified</span></div>
+            <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid #e2e5ea;border-radius:8px;padding:12px 16px;"><span style="font-size:13px;color:#40485a;">MSME classification</span><span style="font-size:12px;font-weight:600;color:#0f7a5c;">✓ Small Enterprise (Udyam-verified)</span></div>
+            <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid #fbe6b8;border-radius:8px;padding:12px 16px;"><span style="font-size:13px;color:#40485a;">Bank account &amp; IFSC</span><span style="font-size:12px;font-weight:600;color:#a5670f;">Vendor-claimed, ending {{ raviBankLast4 }}</span></div>
+          </div>
+          <div style="background:#f4f8fb;border:1px solid #dbe6ee;border-radius:10px;padding:16px 18px;font-size:13px;color:#40485a;line-height:1.5;margin-bottom:18px;">Visible now to <strong>Initech Manufacturing Ltd</strong>. If another buyer invites you later, they'll see this same verified profile with no re-upload from you.</div>
+          <div style="display:flex;gap:10px;">
+            <button onClick="{{ raviReset }}" style="background:none;border:1px solid #d7dbe3;color:#565f6f;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Restart demo</button>
+            <button onClick="{{ withdrawConsent }}" style="background:none;border:1px solid #f2c9c5;color:#b3261e;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Withdraw consent (DPDP Right to Erase)</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ raviStepIs4 }}" hint-placeholder-val="{{ false }}">
+          <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">Consent withdrawn</h1>
+          <p style="color:#565f6f;font-size:13.5px;margin:0 0 20px;line-height:1.5;">Bank account and address are wiped immediately. GST, PAN and the immutable audit log are kept — only anonymized fields survive, to preserve historical tax-audit records.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:22px;">
+            <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid #e2e5ea;border-radius:8px;padding:12px 16px;"><span style="font-size:13px;color:#40485a;">GST / PAN</span><span style="font-size:12px;font-weight:600;color:#565f6f;">Retained for audit</span></div>
+            <div style="display:flex;justify-content:space-between;background:#fff;border:1px solid #e2e5ea;border-radius:8px;padding:12px 16px;"><span style="font-size:13px;color:#40485a;">Bank account &amp; IFSC</span><span style="font-size:12px;font-weight:600;color:#b3261e;">Erased</span></div>
+          </div>
+          <button onClick="{{ raviReset }}" style="background:none;border:1px solid #d7dbe3;color:#565f6f;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;">Restart demo</button>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <!-- ================= ANANYA: SYSTEM CONNECTIONS ================= -->
+    <sc-if value="{{ isAnanya }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Ananya System Connections" style="max-width:720px;margin:0 auto;">
+        <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">Company system connections</h1>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 26px;max-width:600px;">Pramaan connects to your systems only through each vendor's official, approved integration path — never a workaround.</p>
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:20px 22px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-weight:700;font-size:15px;">Oracle Link</div>
+                <div style="font-size:12.5px;color:#8890a0;margin-top:2px;">Oracle Fusion Cloud Procurement — official supplier data API</div>
+              </div>
+              <sc-if value="{{ oracleConnected }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;font-weight:600;color:#0f7a5c;background:#eefaf4;padding:6px 12px;border-radius:20px;">✓ Connected</span>
+              </sc-if>
+              <sc-if value="{{ oracleConnecting }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;font-weight:600;color:#1e5f8c;">Connecting…</span>
+              </sc-if>
+              <sc-if value="{{ oracleIdle }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ connectOracle }}" style="background:#12182b;color:#fff;border:none;padding:10px 16px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">Connect via Oracle's official integration</button>
+              </sc-if>
+            </div>
+            <sc-if value="{{ oracleConnected }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eef0f3;font-size:12px;color:#8890a0;">Connected via Oracle's official integration method · verified channel, not a workaround · linked {{ oracleDate }}</div>
+              <div style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a7afc0;">Read-only baseline sync complete · idempotency key sha256(vendor_id+field+value) prevents duplicate supplier records on retry</div>
+            </sc-if>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e5ea;border-radius:10px;padding:20px 22px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-weight:700;font-size:15px;">SAP Link</div>
+                <div style="font-size:12.5px;color:#8890a0;margin-top:2px;">SAP Ariba / S/4HANA — official supplier master data channel</div>
+              </div>
+              <sc-if value="{{ sapConnected }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;font-weight:600;color:#0f7a5c;background:#eefaf4;padding:6px 12px;border-radius:20px;">✓ Connected</span>
+              </sc-if>
+              <sc-if value="{{ sapConnecting }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;font-weight:600;color:#1e5f8c;">Connecting…</span>
+              </sc-if>
+              <sc-if value="{{ sapIdle }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ connectSap }}" style="background:#12182b;color:#fff;border:none;padding:10px 16px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;">Connect via SAP's official integration</button>
+              </sc-if>
+            </div>
+            <sc-if value="{{ sapConnected }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eef0f3;font-size:12px;color:#8890a0;">Connected via SAP's official integration method · verified channel, not a workaround · linked {{ sapDate }}</div>
+              <div style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a7afc0;">OData V4 on SAP BTP · writes validated against official metadata before push · failures retry with backoff, then move to a dead-letter queue and mark this connection Degraded</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;background:#f4f8fb;border:1px solid #dbe6ee;border-radius:10px;padding:16px 18px;font-size:12.5px;color:#40485a;">No custom scripts, no direct database access, no unofficial shortcuts — every connection uses the integration path each ERP vendor has approved.</div>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <!-- VENDOR DETAIL DRAWER -->
+  <sc-if value="{{ hasSelectedVendor }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeVendor }}" style="position:fixed;inset:0;background:rgba(10,14,26,0.45);display:flex;justify-content:flex-end;z-index:40;">
+      <div onClick="{{ stopProp }}" style="width:420px;max-width:92vw;height:100%;background:#fff;padding:28px;overflow-y:auto;box-shadow:-8px 0 24px rgba(0,0,0,0.1);">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:4px;">
+          <div style="font-size:19px;font-weight:700;">{{ selectedVendor.name }}</div>
+          <button onClick="{{ closeVendor }}" style="background:none;border:none;font-size:15px;color:#8890a0;cursor:pointer;">✕</button>
+        </div>
+        <div style="font-size:12px;color:{{ selectedVendor.statusColor }};font-weight:600;margin-bottom:20px;">{{ selectedVendor.statusLabel }}</div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:8px;">Government-verified</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:9px 12px;background:#eefaf4;border-radius:7px;"><span>GST</span><span style="font-family:'IBM Plex Mono',monospace;">{{ selectedVendor.gst }}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:9px 12px;background:#eefaf4;border-radius:7px;"><span>PAN</span><span style="font-family:'IBM Plex Mono',monospace;">{{ selectedVendor.pan }}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:9px 12px;background:#eefaf4;border-radius:7px;"><span>MSME</span><span>{{ selectedVendor.msme }}</span></div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:8px;">Vendor-claimed</div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:9px 12px;background:#fdf6e8;border-radius:7px;margin-bottom:18px;"><span>Bank account</span><span style="font-family:'IBM Plex Mono',monospace;">{{ selectedVendor.bank }}</span></div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:8px;">Audit trail — append-only, cannot be edited or deleted</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+          <sc-for list="{{ selectedVendor.history }}" as="h" hint-placeholder-count="2">
+            <div style="font-size:12px;color:#40485a;border-left:2px solid #e2e5ea;padding-left:10px;">
+              <div style="color:#8890a0;font-size:11px;">{{ h.date }}</div>{{ h.description }}
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8890a0;margin-bottom:8px;">Private notes · Initech Manufacturing Ltd only</div>
+        <div style="font-size:12.5px;color:#565f6f;background:#f8f9fb;border:1px solid #eef0f3;border-radius:7px;padding:10px 12px;">{{ selectedVendor.privateNote }}</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- GAPS / OPEN QUESTIONS MODAL -->
+  <sc-if value="{{ showGaps }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ toggleGaps }}" style="position:fixed;inset:0;background:rgba(10,14,26,0.5);display:flex;align-items:center;justify-content:center;z-index:50;">
+      <div onClick="{{ stopProp }}" style="background:#fff;border-radius:12px;padding:30px;max-width:560px;width:92vw;max-height:84vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:18px;">
+          <h2 style="font-size:18px;font-weight:700;margin:0;">Scope &amp; open questions</h2>
+          <button onClick="{{ toggleGaps }}" style="background:none;border:none;font-size:15px;color:#8890a0;cursor:pointer;">✕</button>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#8890a0;margin-bottom:8px;">Explicitly not built in this MVP</div>
+        <ul style="margin:0 0 20px;padding-left:18px;font-size:13px;color:#40485a;line-height:1.8;">
+          <li>A full ERP or buying platform</li>
+          <li>General cyber-risk scoring</li>
+          <li>Vendor performance tracking (delivery, contract quality)</li>
+          <li>Markets outside India</li>
+        </ul>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#8890a0;margin-bottom:8px;">Open questions the source PRD leaves unresolved</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:#40485a;line-height:1.8;">
+          <li>No verification-provider API is named — represented generically as "government registry check."</li>
+          <li>The PRD mentions one part of the MVP runs on a "slightly less official channel until upgraded," without saying which — not visualized here.</li>
+          <li>Liability if a verified vendor later commits fraud is flagged as needing legal review, with no answer given — no guarantee language is used anywhere in this prototype as a result.</li>
+          <li>A full provider-outage state (beyond a government-registry retry) isn't described in the source — not designed.</li>
+        </ul>
+      </div>
+    </div>
+  </sc-if>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const VENDOR_SEED = [
+  { name: "Shree Balaji Logistics", gst: "27AABCS1234F1Z5", pan: "AABCS1234F", ifsc: "HDFC0001234", msme: "Small Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: null, bank: "•••• 4521", history: [{date:"12 Jul 2026", description:"Registered address updated — logged silently, no alert (LOW severity, non-essential vendor)."}] },
+  { name: "Ganesh Traders Pvt Ltd", gst: "19AAGCT5678K1Z2", pan: "AAGCT5678K", ifsc: "ICIC0002211", msme: "Micro Enterprise", criticality: "Significant", state: "awaiting_consent", risk: "medium", days: null, bank: "—", history: [] },
+  { name: "Om Sai Enterprises", gst: "24AAOSE9012L1Z8", pan: "AAOSE9012L", ifsc: "SBIN0003345", msme: "Micro Enterprise", criticality: "Critical", state: "verified", risk: "high", days: 3, bank: "•••• 7788", history: [{date:"6 Aug 2026", description:"Bank account changed — CRITICAL alert routed to Finance, payment run held."}] },
+  { name: "Bharat Freight Solutions", gst: "07ABFS3344M1Z1", pan: "ABFS3344M", ifsc: "AXIS0004421", msme: "Small Enterprise", criticality: "Significant", state: "awaiting_consent", risk: "medium", days: null, bank: "—", history: [] },
+  { name: "Nova Textiles Ltd", gst: "33ANTL7788N1Z6", pan: "ANTL7788N", ifsc: "PUNB0005567", msme: "Medium Enterprise", criticality: "Significant", state: "retrying", risk: "medium", days: null, bank: "•••• 5541", history: [{date:"9 Aug 2026", description:"Primary registry provider timed out — circuit breaker failed over to backup, retrying automatically."}] },
+  { name: "Suresh & Sons Trading", gst: "09ASST2211P1Z3", pan: "ASST2211P", ifsc: "KKBK0006678", msme: "Micro Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: 40, bank: "•••• 3312", history: [] },
+  { name: "Kaveri Agro Exports", gst: "29AKAE6655Q1Z9", pan: "AKAE6655Q", ifsc: "UTIB0007789", msme: "Small Enterprise", criticality: "Significant", state: "verified", risk: "high", days: 7, bank: "•••• 9087", history: [{date:"5 Aug 2026", description:"New bank account added — CRITICAL alert routed to Finance."}] },
+  { name: "Vikram Steel Works", gst: "23AVSW4433R1Z4", pan: "AVSW4433R", ifsc: "IDFB0008890", msme: "Medium Enterprise", criticality: "Critical", state: "verified", risk: "high", days: null, bank: "•••• 1120", history: [{date:"4 Aug 2026", description:"GST registration suspended by GSTN — HIGH alert routed to Finance & Compliance."}] },
+  { name: "Anand Packaging Co", gst: "06AAPC8899S1Z7", pan: "AAPC8899S", ifsc: "YESB0009901", msme: "Micro Enterprise", criticality: "Non-essential", state: "verified", risk: "high", days: -2, bank: "•••• 6674", history: [{date:"25 Jun 2026", description:"43B(h) window breached — invoice locked from normal payment queue."}] },
+  { name: "Metro Chemicals Ltd", gst: "27AMCL1122T1Z0", pan: "AMCL1122T", ifsc: "BARB0001012", msme: "Medium Enterprise", criticality: "Significant", state: "verified", risk: "high", days: null, bank: "•••• 4409", history: [{date:"20 Jun 2026", description:"MSME classification shifted Small → Medium — HIGH alert, 43B(h) protection lifted."}] },
+  { name: "Sundaram Motors", gst: "33ASMT5566U1Z2", pan: "ASMT5566U", ifsc: "HDFC0002345", msme: "Not Registered", criticality: "Non-essential", state: "verified", risk: "medium", days: null, bank: "•••• 8823", history: [{date:"1 Aug 2026", description:"GST flagged suspended — MEDIUM, routed to Procurement for internal review."}] },
+  { name: "Prakash Electricals", gst: "24APEL7799V1Z8", pan: "APEL7799V", ifsc: "ICIC0003356", msme: "Small Enterprise", criticality: "Significant", state: "awaiting_consent", risk: "medium", days: null, bank: "—", history: [] },
+  { name: "Krishna Constructions", gst: "07AKCN3321W1Z5", pan: "AKCN3321W", ifsc: "SBIN0004467", msme: "Medium Enterprise", criticality: "Critical", state: "verified", risk: "low", days: null, bank: "•••• 5502", history: [] },
+  { name: "Lakshmi Foods Pvt Ltd", gst: "29ALFP6644X1Z1", pan: "ALFP6644X", ifsc: "AXIS0005578", msme: "Small Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: null, bank: "•••• 7761", history: [] },
+  { name: "Raj Enterprises", gst: "09AREN9911Y1Z6", pan: "AREN9911Y", ifsc: "PUNB0006689", msme: "Micro Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: null, bank: "•••• 3390", history: [] },
+  { name: "Global Spares India", gst: "27AGSI2288Z1Z3", pan: "AGSI2288Z", ifsc: "KKBK0007790", msme: "Medium Enterprise", criticality: "Significant", state: "verified", risk: "medium", days: null, bank: "•••• 1145", history: [{date:"18 Jul 2026", description:"Bank account changed 3 weeks ago — CRITICAL alert already actioned (held)."}] },
+  { name: "Deccan Plastics", gst: "36ADPL5577A1Z9", pan: "ADPL5577A", ifsc: "UTIB0008801", msme: "Small Enterprise", criticality: "Significant", state: "retrying", risk: "medium", days: null, bank: "•••• 6612", history: [{date:"9 Aug 2026", description:"Registry check pending — waiting and retrying, never guessing."}] },
+  { name: "Himalaya Pharma Supplies", gst: "05AHPS8822B1Z4", pan: "AHPS8822B", ifsc: "IDFB0009912", msme: "Small Enterprise", criticality: "Significant", state: "verified", risk: "low", days: 38, bank: "•••• 4478", history: [] },
+  { name: "Coastal Shipping Agency", gst: "32ACSA1199C1Z7", pan: "ACSA1199C", ifsc: "YESB0000923", msme: "Medium Enterprise", criticality: "Critical", state: "verified", risk: "low", days: null, bank: "•••• 9903", history: [] },
+  { name: "Vishal Hardware Traders", gst: "08AVHT6633D1Z2", pan: "AVHT6633D", ifsc: "BARB0001934", msme: "Micro Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: null, bank: "•••• 2256", history: [] },
+  { name: "Vertex Engineering", gst: "27AVEN4488E1Z8", pan: "AVEN4488E", ifsc: "HDFC0002945", msme: "Medium Enterprise", criticality: "Significant", state: "verified", risk: "low", days: null, bank: "•••• 8834", history: [] },
+  { name: "Unity Cotton Mills", gst: "24AUCM7722F1Z5", pan: "AUCM7722F", ifsc: "ICIC0003956", msme: "Small Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: null, bank: "•••• 5567", history: [{date:"29 Jul 2026", description:"Registered address updated — logged silently, no alert."}] },
+  { name: "Prime Auto Components", gst: "29APAC3355G1Z1", pan: "APAC3355G", ifsc: "SBIN0004967", msme: "Small Enterprise", criticality: "Critical", state: "verified", risk: "medium", days: 9, bank: "•••• 7712", history: [{date:"14 Jul 2026", description:"Registered address updated — MEDIUM alert routed to Legal for contract review."}] },
+  { name: "Sagar Logistics", gst: "33ASLG9944H1Z6", pan: "ASLG9944H", ifsc: "AXIS0005978", msme: "Micro Enterprise", criticality: "Non-essential", state: "verified", risk: "low", days: null, bank: "•••• 3341", history: [{date:"3 Aug 2026", description:"Registered address updated — logged silently, no alert."}] },
+  { name: "Trident Industries", gst: "27ATIN6611I1Z3", pan: "ATIN6611I", ifsc: "PUNB0006989", msme: "Medium Enterprise", criticality: "Significant", state: "verified", risk: "low", days: null, bank: "•••• 9956", history: [] }
+];
+
+const STATUS_META = {
+  verified: { label: "Verified", color: "#0f7a5c" },
+  awaiting_consent: { label: "Awaiting consent", color: "#8890a0" },
+  retrying: { label: "Retrying — registry down", color: "#1e5f8c" }
+};
+const RISK_META = {
+  low: { label: "Low risk", color: "#6b7280" },
+  medium: { label: "Medium risk", color: "#a5670f" },
+  high: { label: "High risk — action needed", color: "#b3261e" }
+};
+const BHARAT_IDX = 3;
+const DUMMY_CREDS = {
+  priya: { username: "priya@demo.in", password: "demo" },
+  ravi: { username: "ravi@demo.in", password: "demo" },
+  ananya: { username: "ananya@demo.in", password: "demo" }
+};
+const SEVERITY_META = {
+  CRITICAL: { label: "Critical", color: "#7a1620" },
+  HIGH: { label: "High", color: "#b3261e" },
+  MEDIUM: { label: "Medium", color: "#a5670f" },
+  LOW: { label: "Low", color: "#8890a0" }
+};
+const PROCESS_ACTION = {
+  PAYMENT: "Hold This Payment",
+  TAX: "Hold GST Payouts",
+  COMPLIANCE: "Reassess Payment Terms",
+  CONTRACT: "Flag for Contract Review"
+};
+
+const ALERT_SEED = [
+  { vendorIdx: 2, changeType: "BANK_CHANGE", process: "PAYMENT", description: "Bank account changed from account ending 4402 to 7788.", severity: "CRITICAL", timestamp: "Today, 6:14 AM", routedTo: "Finance", status: "open" },
+  { vendorIdx: 6, changeType: "BANK_CHANGE", process: "PAYMENT", description: "New bank account added ahead of next payment cycle.", severity: "CRITICAL", timestamp: "Yesterday, 9:41 PM", routedTo: "Finance", status: "open" },
+  { vendorIdx: 7, changeType: "GST_SUSPENDED", process: "TAX", description: "GST registration suspended by GSTN — tax credit at risk.", severity: "HIGH", timestamp: "4 Aug, 7:30 AM", routedTo: "Finance & Compliance", status: "open" },
+  { vendorIdx: 9, changeType: "GST_SUSPENDED", process: "COMPLIANCE", description: "GST flagged suspended — non-essential vendor, internal review only.", severity: "MEDIUM", timestamp: "1 Aug, 10:05 AM", routedTo: "Procurement", status: "open" },
+  { vendorIdx: 9, changeType: "MSME_CLASS_SHIFT", process: "COMPLIANCE", description: "MSME classification shifted Small → Medium — 43B(h) protection lifted.", severity: "HIGH", timestamp: "20 Jun, 8:00 AM", routedTo: "Finance & Compliance", status: "open" },
+  { vendorIdx: 22, changeType: "ADDRESS_CHANGE", process: "CONTRACT", description: "Registered office address updated — potential delivery-region shift.", severity: "MEDIUM", timestamp: "14 Jul, 11:20 AM", routedTo: "Legal", status: "open" },
+  { vendorIdx: 0, changeType: "ADDRESS_CHANGE", process: "NONE", description: "Registered address updated.", severity: "LOW", timestamp: "12 Jul, 2:03 PM", routedTo: "Logged only", status: "logged" },
+  { vendorIdx: 23, changeType: "ADDRESS_CHANGE", process: "NONE", description: "Registered address updated.", severity: "LOW", timestamp: "3 Aug, 9:00 AM", routedTo: "Logged only", status: "logged" },
+  { vendorIdx: 15, changeType: "BANK_CHANGE", process: "PAYMENT", description: "Bank account changed 3 weeks ago — already actioned.", severity: "CRITICAL", timestamp: "18 Jul, 3:12 PM", routedTo: "Finance", status: "held" }
+];
+
+// ---- Live backend adapter (integration with pramaan-api) ----
+const API_BASE = "https://pramaan-api.vercel.app";
+let AUTH = null; // { token, role, email, buyerId, vendorId }
+const ROLE_TO_PERSONA = { COMPLIANCE: "priya", VENDOR: "ravi", BUYER_ADMIN: "ananya" };
+function decodeJwt(t) {
+  try { return JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
+  catch (e) { return {}; }
+}
+async function apiFetch(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({ "content-type": "application/json" }, opts.headers || {});
+  if (AUTH && AUTH.token) headers.authorization = "Bearer " + AUTH.token;
+  const r = await fetch(API_BASE + path, {
+    method: opts.method || "GET",
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  let data = null; try { data = await r.json(); } catch (e) {}
+  return { status: r.status, data };
+}
+async function apiLogin(email, password) {
+  try {
+    const r = await apiFetch("/v1/auth/login", { method: "POST", body: { email, password } });
+    if (r.status !== 200 || !r.data || !r.data.token) {
+      return { ok: false, error: (r.data && r.data.error) || ("Sign in failed (" + r.status + ")") };
+    }
+    const claims = decodeJwt(r.data.token);
+    AUTH = { token: r.data.token, role: r.data.role || claims.role, email: claims.email || email, buyerId: claims.buyerId, vendorId: claims.vendorId };
+    return { ok: true, persona: ROLE_TO_PERSONA[AUTH.role] || "priya" };
+  } catch (e) { return { ok: false, error: "Couldn't reach the server. Check your connection." }; }
+}
+
+class Component extends DCLogic {
+  state = {
+    loggedIn: false,
+    authView: "login",
+    loginRole: "priya",
+    loginUsername: "priya@demo.in",
+    loginPassword: "demo",
+    loginError: "",
+    registerRole: "priya",
+    registerName: "",
+    registerEmail: "",
+    registerOrg: "",
+    registerPassword: "",
+    forgotEmail: "",
+    forgotSent: false,
+    loggingIn: false,
+    persona: "priya",
+    priyaTab: "dashboard",
+    searchQuery: "",
+    dashMsmeFilter: "all",
+    dashAttentionOnly: false,
+    selectedVendorId: null,
+    selectedAlertIdx: null,
+    alerts: ALERT_SEED.map((a, i) => ({ ...a, id: i })),
+    raviStep: 0,
+    raviConsent: false,
+    raviGst: "27ABFPS4521Q1Z8",
+    raviPan: "ABFPS4521Q",
+    raviBank: "502011044521",
+    raviIfsc: "HDFC0004521",
+    raviCheckLog: "",
+    oracle: "idle",
+    sap: "idle",
+    oracleDate: null,
+    sapDate: null,
+    showGaps: false
+  };
+
+  vendors = VENDOR_SEED.map((v, i) => ({ ...v, id: i }));
+
+  selectVendor = (id) => this.setState({ selectedVendorId: id });
+  closeVendor = () => this.setState({ selectedVendorId: null });
+  stopProp = (e) => e.stopPropagation();
+
+  buildVendorRow(v) {
+    const sm = STATUS_META[v.state];
+    const rm = RISK_META[v.risk];
+    let taxLabel = "—", taxColor = "#c1c6d0";
+    if (v.days !== null) { taxLabel = v.days <= 0 ? "Breached" : v.days + " days left"; taxColor = v.days <= 0 ? "#7a1620" : v.days <= 10 ? "#b3261e" : v.days <= 25 ? "#a5670f" : "#565f6f"; }
+    const consentLabel = v.state === "awaiting_consent" ? "Not given" : "Given";
+    const consentColor = v.state === "awaiting_consent" ? "#b3261e" : "#0f7a5c";
+    const lastChecked = v.state === "awaiting_consent" ? "Not yet checked" : v.state === "retrying" ? "Pending — retrying" : "Today, 6:00 AM";
+    return {
+      ...v, statusLabel: sm.label, statusColor: sm.color, riskLabel: rm.label, riskColor: rm.color,
+      taxLabel, taxColor, consentLabel, consentColor, lastChecked,
+      select: () => this.selectVendor(v.id)
+    };
+  }
+
+  get vendorRows() { return this.vendors.map(v => this.buildVendorRow(v)); }
+
+  renderVals() {
+    const persona = this.state.persona;
+    const rows = this.vendorRows;
+
+    const riskOrder = { high: 0, medium: 1, low: 2 };
+    const stateOrder = { awaiting_consent: 0, retrying: 1, verified: 2 };
+    const sortedVendors = [...rows].sort((a, b) => (stateOrder[a.state] - stateOrder[b.state]) || (riskOrder[a.risk] - riskOrder[b.risk]));
+
+    const MSME_CATS = ["Micro Enterprise", "Small Enterprise", "Medium Enterprise", "Not Registered"];
+    const msmeFilter = this.state.dashMsmeFilter;
+    const attentionOnly = this.state.dashAttentionOnly;
+    const stylizeEarly = (o) => Object.entries(o).map(([k, v]) => k.replace(/[A-Z]/g, m => "-" + m.toLowerCase()) + ":" + v).join(";");
+    const chipStyle = (active) => stylizeEarly({ padding: "7px 12px", "border-radius": "20px", border: "1px solid " + (active ? "#12182b" : "#d7dbe3"), background: active ? "#12182b" : "#fff", color: active ? "#fff" : "#40485a", "font-size": "12px", "font-weight": 600, cursor: "pointer", "font-family": "inherit", display: "flex", "align-items": "center", gap: "6px" });
+    const chipCountStyle = (active) => stylizeEarly({ "font-size": "11px", color: active ? "#9aa7c7" : "#8890a0" });
+    const msmeChips = ["all", ...MSME_CATS].map(cat => ({
+      key: cat,
+      label: cat === "all" ? "All" : cat.replace(" Enterprise", ""),
+      count: cat === "all" ? rows.length : rows.filter(v => v.msme === cat).length,
+      style: chipStyle(msmeFilter === cat),
+      countStyle: chipCountStyle(msmeFilter === cat),
+      select: () => this.setState({ dashMsmeFilter: cat })
+    }));
+
+    let dashVendors = msmeFilter === "all" ? sortedVendors : sortedVendors.filter(v => v.msme === msmeFilter);
+    if (attentionOnly) dashVendors = dashVendors.filter(v => v.state !== "verified" || v.risk === "high");
+
+    const atRiskVendors = rows.filter(v => v.days !== null).sort((a, b) => a.days - b.days).map(v => ({
+      ...v,
+      daysLabel: v.days <= 0 ? "Breached" : v.days + "d",
+      urgencyPct: Math.max(0, Math.min(100, Math.round((1 - v.days / 45) * 100))) + "%",
+      urgencyColor: v.days <= 0 ? "#7a1620" : v.days <= 10 ? "#b3261e" : v.days <= 25 ? "#a5670f" : "#0f7a5c"
+    }));
+
+    const q = this.state.searchQuery.trim().toLowerCase();
+    const filteredVendors = q === "" ? rows.slice(0, 8) : rows.filter(v =>
+      v.name.toLowerCase().includes(q) || v.gst.toLowerCase().includes(q) || v.pan.toLowerCase().includes(q)
+    );
+
+    const alerts = this.state.alerts.map(a => {
+      const v = this.vendors[a.vendorIdx];
+      const sm = SEVERITY_META[a.severity];
+      const statusColor = a.status === "held" ? "#0f7a5c" : a.status === "open" ? sm.color : "#8890a0";
+      const statusLabel = a.status === "held" ? "Actioned" : a.status === "open" ? "Open" : "Logged";
+      return {
+        ...a, vendorName: v.name, materialityLabel: sm.label, materialityColor: sm.color,
+        actionLabel: PROCESS_ACTION[a.process] || "Review Now", statusColor, statusLabel,
+        isOpen: a.status === "open", isHeld: a.status === "held",
+        select: () => this.setState({ selectedAlertIdx: a.id }),
+        hold: () => this.setState(s => ({ alerts: s.alerts.map(x => x.id === a.id ? { ...x, status: "held" } : x) }))
+      };
+    });
+    const highAlerts = alerts.filter(a => a.severity === "CRITICAL" || a.severity === "HIGH");
+    const mediumAlerts = alerts.filter(a => a.severity === "MEDIUM");
+    const lowAlerts = alerts.filter(a => a.severity === "LOW");
+    const selectedAlert = this.state.selectedAlertIdx !== null ? alerts.find(a => a.id === this.state.selectedAlertIdx) : null;
+
+    const selVendor = this.state.selectedVendorId !== null ? this.buildVendorRow(this.vendors[this.state.selectedVendorId]) : null;
+    const selectedVendor = selVendor ? { ...selVendor, privateNote: this.privateNoteFor(selVendor) } : null;
+
+    const gstOk = /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z]\d$/.test(this.state.raviGst.toUpperCase());
+    const panOk = /^[A-Z]{5}\d{4}[A-Z]$/.test(this.state.raviPan.toUpperCase());
+    const bankOk = /^\d{9,18}$/.test(this.state.raviBank);
+    const ifscOk = /^[A-Z]{4}0[A-Z\d]{6}$/.test(this.state.raviIfsc.toUpperCase());
+    const raviAllOk = gstOk && panOk && bankOk && ifscOk;
+
+    const tabBtn = (id, active) => ({
+      padding: "13px 16px", background: "none", border: "none", borderBottom: active ? "2px solid #12182b" : "2px solid transparent",
+      color: active ? "#12182b" : "#8890a0", fontWeight: active ? 600 : 500, fontSize: "13.5px", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: "6px"
+    });
+    const stylize = (o) => Object.entries(o).map(([k, v]) => k.replace(/[A-Z]/g, m => "-" + m.toLowerCase()) + ":" + v).join(";");
+    const personaBtn = (active) => stylize({ padding: "7px 14px", "border-radius": "6px", border: "none", cursor: "pointer", "font-family": "inherit", "font-size": "12.5px", "font-weight": 600, background: active ? "#fff" : "transparent", color: active ? "#12182b" : "#9aa7c7" });
+
+    const openAlertsCount = alerts.filter(a => a.status === "open").length;
+
+    const LOGIN_META = {
+      priya: { label: "Buyer · Compliance Lead" },
+      ravi: { label: "Vendor · Supplier" },
+      ananya: { label: "IT Lead · Systems Admin" }
+    };
+    const roleTile = (id, active) => stylize({ flex: 1, padding: "16px", "border-radius": "10px", cursor: "pointer", border: "1px solid " + (active ? "#12182b" : "#e2e5ea"), background: active ? "#12182b" : "#fff", "text-align": "left" });
+    const roleTileText = (active) => active ? "#fff" : "#12151c";
+    const roleTileSub = (active) => active ? "#9aa7c7" : "#8890a0";
+
+    return {
+      loggedIn: this.state.loggedIn, isLoginScreen: !this.state.loggedIn,
+      isAuthLogin: this.state.authView === "login", isAuthRegister: this.state.authView === "register", isAuthForgot: this.state.authView === "forgot",
+      goToLogin: () => this.setState({ authView: "login", loginError: "", forgotSent: false }),
+      goToRegister: () => this.setState({ authView: "register" }),
+      goToForgot: () => this.setState({ authView: "forgot", forgotSent: false }),
+
+      loginRole: this.state.loginRole,
+      pickPriyaRole: () => this.setState({ loginRole: "priya", loginUsername: DUMMY_CREDS.priya.username, loginPassword: DUMMY_CREDS.priya.password, loginError: "" }),
+      pickRaviRole: () => this.setState({ loginRole: "ravi", loginUsername: DUMMY_CREDS.ravi.username, loginPassword: DUMMY_CREDS.ravi.password, loginError: "" }),
+      pickAnanyaRole: () => this.setState({ loginRole: "ananya", loginUsername: DUMMY_CREDS.ananya.username, loginPassword: DUMMY_CREDS.ananya.password, loginError: "" }),
+      loginTilePriyaStyle: roleTile("priya", this.state.loginRole === "priya"), loginTileRaviStyle: roleTile("ravi", this.state.loginRole === "ravi"), loginTileAnanyaStyle: roleTile("ananya", this.state.loginRole === "ananya"),
+      loginTilePriyaTextColor: roleTileText(this.state.loginRole === "priya"), loginTileRaviTextColor: roleTileText(this.state.loginRole === "ravi"), loginTileAnanyaTextColor: roleTileText(this.state.loginRole === "ananya"),
+      loginTilePriyaSubColor: roleTileSub(this.state.loginRole === "priya"), loginTileRaviSubColor: roleTileSub(this.state.loginRole === "ravi"), loginTileAnanyaSubColor: roleTileSub(this.state.loginRole === "ananya"),
+
+      loginUsername: this.state.loginUsername, onLoginUsernameChange: (e) => this.setState({ loginUsername: e.target.value }),
+      loginPassword: this.state.loginPassword, onLoginPasswordChange: (e) => this.setState({ loginPassword: e.target.value }),
+      loginError: this.state.loginError,
+      loggingIn: this.state.loggingIn, loginButtonOpacity: this.state.loggingIn ? 0.6 : 1,
+      loginPersonRoleLabel: LOGIN_META[persona].label,
+      doLogin: () => {
+        const self = this;
+        self.setState({ loggingIn: true, loginError: "" });
+        apiLogin(self.state.loginUsername.trim().toLowerCase(), self.state.loginPassword).then(function (res) {
+          if (!res.ok) { self.setState({ loggingIn: false, loginError: res.error }); return; }
+          self.setState({ loggedIn: true, loggingIn: false, persona: res.persona });
+        });
+      },
+      signOut: () => { AUTH = null; this.setState({ loggedIn: false, loggingIn: false, authView: "login", loginRole: "priya", loginUsername: DUMMY_CREDS.priya.username, loginPassword: DUMMY_CREDS.priya.password }); },
+
+      registerRole: this.state.registerRole,
+      pickRegPriya: () => this.setState({ registerRole: "priya" }), pickRegRavi: () => this.setState({ registerRole: "ravi" }), pickRegAnanya: () => this.setState({ registerRole: "ananya" }),
+      regTilePriyaStyle: roleTile("priya", this.state.registerRole === "priya"), regTileRaviStyle: roleTile("ravi", this.state.registerRole === "ravi"), regTileAnanyaStyle: roleTile("ananya", this.state.registerRole === "ananya"),
+      regTilePriyaTextColor: roleTileText(this.state.registerRole === "priya"), regTileRaviTextColor: roleTileText(this.state.registerRole === "ravi"), regTileAnanyaTextColor: roleTileText(this.state.registerRole === "ananya"),
+      regTilePriyaSubColor: roleTileSub(this.state.registerRole === "priya"), regTileRaviSubColor: roleTileSub(this.state.registerRole === "ravi"), regTileAnanyaSubColor: roleTileSub(this.state.registerRole === "ananya"),
+      registerName: this.state.registerName, onRegisterNameChange: (e) => this.setState({ registerName: e.target.value }),
+      registerEmail: this.state.registerEmail, onRegisterEmailChange: (e) => this.setState({ registerEmail: e.target.value }),
+      registerOrg: this.state.registerOrg, onRegisterOrgChange: (e) => this.setState({ registerOrg: e.target.value }),
+      registerPassword: this.state.registerPassword, onRegisterPasswordChange: (e) => this.setState({ registerPassword: e.target.value }),
+      registerCannotSubmit: !(this.state.registerName.trim() && this.state.registerEmail.trim() && this.state.registerOrg.trim() && this.state.registerPassword.trim().length >= 6),
+      doRegister: () => {
+        this.setState({ loggingIn: true });
+        setTimeout(() => this.setState({ loggedIn: true, loggingIn: false, persona: this.state.registerRole, loginRole: this.state.registerRole }), 900);
+      },
+
+      forgotEmail: this.state.forgotEmail, onForgotEmailChange: (e) => this.setState({ forgotEmail: e.target.value }),
+      forgotSent: this.state.forgotSent, forgotCannotSubmit: !this.state.forgotEmail.trim(),
+      doForgotSubmit: () => this.setState({ forgotSent: true }),
+
+      persona, isPriya: persona === "priya", isRavi: persona === "ravi", isAnanya: persona === "ananya",
+
+      setTabDash: () => this.setState({ priyaTab: "dashboard" }), setTabTax: () => this.setState({ priyaTab: "tax" }),
+      setTabSearch: () => this.setState({ priyaTab: "search" }), setTabAlerts: () => this.setState({ priyaTab: "alerts" }),
+      tabStyleDash: stylize(tabBtn("dashboard", this.state.priyaTab === "dashboard")),
+      tabStyleTax: stylize(tabBtn("tax", this.state.priyaTab === "tax")),
+      tabStyleSearch: stylize(tabBtn("search", this.state.priyaTab === "search")),
+      tabStyleAlerts: stylize(tabBtn("alerts", this.state.priyaTab === "alerts")),
+      alertsCountPillStyle: "background:#b3261e;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;",
+      isPriyaDash: persona === "priya" && this.state.priyaTab === "dashboard",
+      isPriyaTax: persona === "priya" && this.state.priyaTab === "tax",
+      isPriyaSearch: persona === "priya" && this.state.priyaTab === "search",
+      isPriyaAlerts: persona === "priya" && this.state.priyaTab === "alerts",
+
+      totalVendorCount: this.vendors.length,
+      needsAttentionCount: rows.filter(v => v.state !== "verified" || v.risk === "high").length,
+      atRiskTaxCount: atRiskVendors.length,
+      sortedVendors, atRiskVendors,
+      msmeChips, dashVendors,
+      dashVendorCountLabel: "Showing " + dashVendors.length + " of " + rows.length + " vendors",
+      attentionCardStyle: stylizeEarly({ background: attentionOnly ? "#12182b" : "#fff", border: "1px solid " + (attentionOnly ? "#12182b" : "#e2e5ea"), "border-radius": "10px", padding: "16px 18px", cursor: "pointer" }),
+      attentionCardHint: attentionOnly ? "click to clear filter" : "of " + this.vendors.length + " vendors watched — click to filter",
+      toggleAttentionOnly: () => this.setState(s => ({ dashAttentionOnly: !s.dashAttentionOnly })),
+
+      searchQuery: this.state.searchQuery,
+      onSearchChange: (e) => this.setState({ searchQuery: e.target.value }),
+      searchResultLabel: q === "" ? "Showing recent vendors — start typing to search all " + this.vendors.length : filteredVendors.length + " result(s) instantly",
+      filteredVendors,
+
+      openAlertsCount, highAlerts, mediumAlerts, lowAlerts,
+      hasSelectedAlert: !!selectedAlert, selectedAlert,
+      closeAlert: () => this.setState({ selectedAlertIdx: null }),
+
+      hasSelectedVendor: !!selectedVendor, selectedVendor, closeVendor: this.closeVendor, stopProp: this.stopProp,
+
+      raviStepIs0: this.state.raviStep === 0, raviStepIs1: this.state.raviStep === 1, raviStepIs2: this.state.raviStep === 2, raviStepIs3: this.state.raviStep === 3,
+      raviBarColor0: this.state.raviStep >= 0 ? "#12182b" : "#e2e5ea",
+      raviBarColor1: this.state.raviStep >= 1 ? "#12182b" : "#e2e5ea",
+      raviBarColor2: this.state.raviStep >= 2 ? "#12182b" : "#e2e5ea",
+      raviBarColor3: this.state.raviStep >= 3 ? "#12182b" : "#e2e5ea",
+      raviConsent: this.state.raviConsent,
+      toggleConsent: () => this.setState(s => ({ raviConsent: !s.raviConsent })),
+      raviCannotContinue: !this.state.raviConsent,
+      raviNext: () => { if (this.state.raviConsent) this.setState({ raviStep: 1 }); },
+      raviContinueStyle: stylize({ background: "#12182b", color: "#fff", border: "none", padding: "13px 24px", "border-radius": "8px", "font-size": "14.5px", "font-weight": 600, cursor: "pointer", "font-family": "inherit", opacity: (this.state.raviStep === 0 && !this.state.raviConsent) || (this.state.raviStep === 1 && !raviAllOk) ? 0.45 : 1 }),
+
+      raviGst: this.state.raviGst, onGstChange: (e) => this.setState({ raviGst: e.target.value }),
+      raviGstInputStyle: stylize({ width: "100%", padding: "11px 14px", "border-radius": "8px", border: "1px solid " + (this.state.raviGst === "" ? "#d7dbe3" : gstOk ? "#8fd6b8" : "#f2b8b8"), "font-family": "'IBM Plex Mono',monospace", "font-size": "13.5px", outline: "none" }),
+      raviGstHint: this.state.raviGst === "" ? "15-character GST format, checked before any government lookup." : gstOk ? "Format looks correct." : "Doesn't match GST format yet.",
+      raviGstHintColor: this.state.raviGst === "" ? "#8890a0" : gstOk ? "#0f7a5c" : "#b3261e",
+
+      raviPan: this.state.raviPan, onPanChange: (e) => this.setState({ raviPan: e.target.value }),
+      raviPanInputStyle: stylize({ width: "100%", padding: "11px 14px", "border-radius": "8px", border: "1px solid " + (this.state.raviPan === "" ? "#d7dbe3" : panOk ? "#8fd6b8" : "#f2b8b8"), "font-family": "'IBM Plex Mono',monospace", "font-size": "13.5px", outline: "none" }),
+      raviPanHint: this.state.raviPan === "" ? "10-character PAN format." : panOk ? "Format looks correct." : "Doesn't match PAN format yet.",
+      raviPanHintColor: this.state.raviPan === "" ? "#8890a0" : panOk ? "#0f7a5c" : "#b3261e",
+
+      raviBank: this.state.raviBank, onBankChange: (e) => this.setState({ raviBank: e.target.value }),
+      raviBankInputStyle: stylize({ width: "100%", padding: "11px 14px", "border-radius": "8px", border: "1px solid " + (this.state.raviBank === "" ? "#d7dbe3" : bankOk ? "#8fd6b8" : "#f2b8b8"), "font-family": "'IBM Plex Mono',monospace", "font-size": "13.5px", outline: "none" }),
+      raviBankHint: this.state.raviBank === "" ? "9-18 digits — treated as a claim until a future bank-account check confirms it." : bankOk ? "Format looks correct." : "Should be 9-18 digits.",
+      raviBankHintColor: this.state.raviBank === "" ? "#8890a0" : bankOk ? "#0f7a5c" : "#b3261e",
+      raviIfsc: this.state.raviIfsc, onIfscChange: (e) => this.setState({ raviIfsc: e.target.value }),
+      raviIfscInputStyle: stylize({ width: "100%", padding: "11px 14px", "border-radius": "8px", border: "1px solid " + (this.state.raviIfsc === "" ? "#d7dbe3" : ifscOk ? "#8fd6b8" : "#f2b8b8"), "font-family": "'IBM Plex Mono',monospace", "font-size": "13.5px", outline: "none" }),
+      raviIfscHint: this.state.raviIfsc === "" ? "11-character IFSC, checked against the RBI routing format." : ifscOk ? "Format looks correct." : "Doesn't match IFSC format yet.",
+      raviIfscHintColor: this.state.raviIfsc === "" ? "#8890a0" : ifscOk ? "#0f7a5c" : "#b3261e",
+      raviCannotSubmit: !raviAllOk,
+      raviBankLast4: this.state.raviBank.slice(-4) || "0000",
+      raviCheckLog: this.state.raviCheckLog,
+      raviSubmit: () => {
+        if (!raviAllOk) return;
+        this.setState({ raviStep: 2, raviCheckLog: "Checking primary provider (eKYCNow)…" });
+        setTimeout(() => this.setState({ raviCheckLog: "Checking primary provider (eKYCNow)…\nPrimary timed out after 5000ms — circuit breaker tripped." }), 700);
+        setTimeout(() => this.setState({ raviCheckLog: "Checking primary provider (eKYCNow)…\nPrimary timed out after 5000ms — circuit breaker tripped.\nFailing over to backup provider (AuthBridge)…" }), 1300);
+        setTimeout(() => this.setState({ raviCheckLog: "Checking primary provider (eKYCNow)…\nPrimary timed out after 5000ms — circuit breaker tripped.\nFailing over to backup provider (AuthBridge)…\nVerified via AuthBridge." }), 1900);
+        setTimeout(() => {
+          this.vendors[BHARAT_IDX] = {
+            ...this.vendors[BHARAT_IDX], state: "verified", risk: "low", days: 44,
+            bank: "•••• " + (this.state.raviBank.slice(-4) || "4521"),
+            history: [{ date: "Today", description: "Vendor gave consent and passed government verification via AuthBridge (backup provider)." }]
+          };
+          this.setState({ raviStep: 3 });
+        }, 2400);
+      },
+      raviStepIs4: this.state.raviStep === 4,
+      withdrawConsent: () => {
+        this.vendors[BHARAT_IDX] = {
+          ...this.vendors[BHARAT_IDX], bank: "Erased",
+          history: [...this.vendors[BHARAT_IDX].history, { date: "Today", description: "Consent withdrawn (DPDP Right to Erase) — bank details erased, GST/PAN retained for audit." }]
+        };
+        this.setState({ raviStep: 4 });
+      },
+      raviReset: () => {
+        this.vendors[BHARAT_IDX] = { ...this.vendors[BHARAT_IDX], state: "awaiting_consent", risk: "medium", days: null, bank: "—", history: [] };
+        this.setState({ raviStep: 0, raviConsent: false, raviGst: "27ABFPS4521Q1Z8", raviPan: "ABFPS4521Q", raviBank: "502011044521", raviIfsc: "HDFC0004521", raviCheckLog: "" });
+      },
+
+      oracleIdle: this.state.oracle === "idle", oracleConnecting: this.state.oracle === "connecting", oracleConnected: this.state.oracle === "connected",
+      sapIdle: this.state.sap === "idle", sapConnecting: this.state.sap === "connecting", sapConnected: this.state.sap === "connected",
+      oracleDate: this.state.oracleDate, sapDate: this.state.sapDate,
+      connectOracle: () => { this.setState({ oracle: "connecting" }); setTimeout(() => this.setState({ oracle: "connected", oracleDate: "just now" }), 1200); },
+      connectSap: () => { this.setState({ sap: "connecting" }); setTimeout(() => this.setState({ sap: "connected", sapDate: "just now" }), 1200); },
+
+      showGaps: this.state.showGaps, toggleGaps: () => this.setState(s => ({ showGaps: !s.showGaps }))
+    };
+  }
+
+  privateNoteFor(v) {
+    const notes = {
+      "Om Sai Enterprises": "Flagged internally — hold next payment run until finance confirms the new account by phone.",
+      "Kaveri Agro Exports": "Long-standing vendor; new account likely tied to their recent GST amendment. Verify with plant manager before approving.",
+    };
+    return notes[v.name] || "No private notes yet — visible only to Initech Manufacturing Ltd.";
+  }
+}
+</script>
+</body>
+</html>
