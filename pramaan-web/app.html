@@ -107,8 +107,13 @@
   .tile { background:var(--surface); border:1px solid var(--line); border-radius:13px; padding:1.05rem 1.1rem; box-shadow:var(--shadow-sm); }
   .tile .k { font-size:.76rem; color:var(--ink-mute); }
   .tile .v { font-family:var(--serif); font-size:1.9rem; font-weight:600; font-variant-numeric:tabular-nums; margin-top:.2rem; }
-  .tile .v.crit { color:var(--crit); }
+  .tile .v.crit { color:#e5484d; font-weight:700; }
   .tile .v.good { color:var(--good); }
+  .tilebtn { cursor:pointer; font:inherit; color:inherit; text-align:left; transition:border-color .12s, box-shadow .12s; }
+  .tilebtn:hover { border-color:var(--ink-mute); }
+  .tilebtn.active { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .tilebtn:focus-visible { outline:2.5px solid var(--accent); outline-offset:2px; }
+  .msmetag { font-size:.62rem; font-weight:700; letter-spacing:.04em; color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent); border:1px solid color-mix(in srgb,var(--accent) 30%,transparent); padding:.1rem .4rem; border-radius:999px; margin-left:.45rem; white-space:nowrap; vertical-align:middle; }
 
   .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow-sm); overflow:hidden; }
   .card > h3 { font-family:var(--sans); font-weight:700; font-size:1rem; padding:1rem 1.15rem; border-bottom:1px solid var(--line); }
@@ -209,68 +214,76 @@
 <script>
   (function () {
     "use strict";
+    var API = "https://pramaan-api.vercel.app";
     var $ = function (s, r) { return (r || document).querySelector(s); };
-    var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    var USERS = {
-      "ravi@demo.in":   { pw: "demo", role: "VENDOR",      name: "Ravi Kumar",  org: "Ravi Logistics Pvt Ltd" },
-      "priya@demo.in":  { pw: "demo", role: "COMPLIANCE",  name: "Priya Menon", org: "Acme Manufacturing" },
-      "ananya@demo.in": { pw: "demo", role: "BUYER_ADMIN", name: "Ananya Rao",  org: "Acme Manufacturing" }
+    // Display-only profiles for the demo accounts (names/orgs aren't in the token).
+    var PROFILE = {
+      "ravi@demo.in":   { name: "Ravi Kumar",  org: "Ravi Logistics Pvt Ltd" },
+      "priya@demo.in":  { name: "Priya Menon", org: "Acme Manufacturing" },
+      "ananya@demo.in": { name: "Ananya Rao",  org: "Acme Manufacturing" }
     };
+    var SESSION = null; // { token, role, email, buyerId, vendorId }
 
-    var ALERTS = [
-      { id: 1, who: "Ravi Logistics",   what: "GST status → SUSPENDED",        sev: "HIGH",     route: "FINANCE",    status: "NEW" },
-      { id: 2, who: "Meher Textiles",   what: "Bank account → changed",        sev: "CRITICAL", route: "FINANCE",    status: "NEW" },
-      { id: 3, who: "Kadam Suppliers",  what: "43B(h) MSME dues · 9 days left", sev: "HIGH",     route: "COMPLIANCE", status: "NEW" },
-      { id: 4, who: "Neelam Foods",     what: "MSME class → shifted",          sev: "HIGH",     route: "FINANCE",    status: "ASSIGNED" },
-      { id: 5, who: "Orbit Freight",    what: "GST status → SUSPENDED",        sev: "HIGH",     route: "FINANCE",    status: "RESOLVED" }
-    ];
-
-    var SHARES = ["Acme Manufacturing", "Sunrise Retail"];
-
-    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
     function toast(msg) {
       var t = $("#toast"); t.textContent = msg; t.classList.add("show");
       clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 2600);
     }
+    function decodeJwt(tok) {
+      try { return JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); }
+      catch (e) { return {}; }
+    }
+    async function api(path, opts) {
+      opts = opts || {};
+      var headers = { "content-type": "application/json" };
+      if (SESSION && SESSION.token) headers.authorization = "Bearer " + SESSION.token;
+      var res = await fetch(API + path, { method: opts.method || "GET", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+      var data = null; try { data = await res.json(); } catch (e) {}
+      return { status: res.status, data: data };
+    }
 
-    /* ---------------- Auth ---------------- */
-    function login(email) {
-      var u = USERS[email];
-      if (!u) return false;
+    /* ---------------- Auth (live backend) ---------------- */
+    async function doLogin(email, pw, btn) {
+      $("#login-err").textContent = "";
+      if (btn) btn.disabled = true;
+      var r;
+      try { r = await api("/v1/auth/login", { method: "POST", body: { email: email, password: pw } }); }
+      catch (e) { $("#login-err").textContent = "Couldn't reach the server. Check your connection and try again."; if (btn) btn.disabled = false; return; }
+      if (btn) btn.disabled = false;
+      if (r.status !== 200 || !r.data || !r.data.token) {
+        $("#login-err").textContent = (r.data && r.data.error) || "Sign in failed. Please try again.";
+        $("#email").setAttribute("aria-invalid", "true");
+        return;
+      }
+      var claims = decodeJwt(r.data.token);
+      SESSION = { token: r.data.token, role: r.data.role || claims.role, email: claims.email || email, buyerId: claims.buyerId, vendorId: claims.vendorId };
+      enterApp();
+    }
+    function enterApp() {
+      var prof = PROFILE[SESSION.email] || { name: SESSION.email.split("@")[0], org: "" };
       $("#login").style.display = "none";
       $("#app").classList.add("show");
-      $("#uName").textContent = u.name;
-      $("#uRole").textContent = u.role.replace("_", " ");
-      $("#uAvatar").textContent = u.name.split(" ").map(function (p) { return p[0]; }).join("").slice(0, 2);
-      renderRoom(email, u);
-      var room = $("#room"); room.focus();
-      return true;
+      $("#uName").textContent = prof.name;
+      $("#uRole").textContent = String(SESSION.role).replace("_", " ");
+      $("#uAvatar").textContent = prof.name.split(" ").map(function (p) { return p[0]; }).join("").slice(0, 2).toUpperCase();
+      renderRoom(prof);
+      $("#room").focus();
     }
 
     $("#loginForm").addEventListener("submit", function (e) {
       e.preventDefault();
-      var email = $("#email").value.trim().toLowerCase();
-      var pw = $("#password").value;
-      var u = USERS[email];
-      if (!u || u.pw !== pw) {
-        $("#login-err").textContent = "That email and password don't match. Try a demo account below.";
-        $("#email").setAttribute("aria-invalid", "true");
-        return;
-      }
-      $("#login-err").textContent = "";
-      login(email);
+      doLogin($("#email").value.trim().toLowerCase(), $("#password").value, e.submitter);
     });
-
     Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (b) {
       b.addEventListener("click", function () {
         var email = b.getAttribute("data-demo");
         $("#email").value = email; $("#password").value = "demo";
-        login(email);
+        doLogin(email, "demo", b);
       });
     });
-
     $("#signout").addEventListener("click", function () {
+      SESSION = null;
       $("#app").classList.remove("show");
       $("#login").style.display = "grid";
       $("#loginForm").reset(); $("#login-err").textContent = "";
@@ -279,72 +292,104 @@
     });
 
     /* ---------------- Rooms ---------------- */
-    function renderRoom(email, u) {
-      if (u.role === "COMPLIANCE") return renderCompliance(u);
-      if (u.role === "VENDOR") return renderVendor(u);
-      return renderAdmin(u);
+    function renderRoom(prof) {
+      if (SESSION.role === "COMPLIANCE") return renderCompliance();
+      if (SESSION.role === "VENDOR") return renderVendor(prof);
+      return renderAdmin(prof);
     }
+    var liveBanner = '<div class="demo-banner" style="background:color-mix(in srgb,var(--good) 12%,var(--surface));border-color:color-mix(in srgb,var(--good) 35%,transparent)">● Live — this data comes from your Pramaan backend and Supabase database. Resolving an alert writes a real audit record.</div>';
+    var demoBanner = '<div class="demo-banner">Sample screen — this room isn\'t wired to the live backend yet (coming next). Actions update this screen only.</div>';
 
-    var banner = '<div class="demo-banner">This is a clickable demo — the data below is sample only. Actions update this screen but don\'t hit a live server yet.</div>';
-
-    /* ---- Priya: compliance dashboard ---- */
-    function renderCompliance(u) {
-      var open = ALERTS.filter(function (a) { return a.status === "NEW" || a.status === "ASSIGNED"; }).length;
-      var crit = ALERTS.filter(function (a) { return (a.sev === "CRITICAL") && a.status !== "RESOLVED"; }).length;
-      var resolved = ALERTS.filter(function (a) { return a.status === "RESOLVED"; }).length;
-
-      $("#room").innerHTML =
-        '<div class="roomhead"><p class="eyebrow">Compliance</p><h2>Vendors that need you today</h2>' +
-        '<p>Sorted by urgency, each alert already routed to whoever can act on it. Resolving one writes a permanent audit record.</p></div>' +
-        banner +
-        '<div class="tiles">' +
-          tile("Open alerts", open) +
-          tile("Critical", crit, "crit") +
-          tile("Resolved today", resolved, "good") +
-          tile("Vendors watched", 128) +
-        '</div>' +
-        '<div class="card"><h3>Alerts</h3><div id="alertList"></div></div>';
-      drawAlerts();
-    }
     function tile(k, v, cls) {
       return '<div class="tile"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || "") + '">' + v + '</div></div>';
     }
-    function drawAlerts() {
-      var list = $("#alertList");
-      list.innerHTML = ALERTS.map(function (a) {
-        var done = a.status === "RESOLVED";
-        var actions = done
-          ? '<span class="statuspill">✓ Resolved</span>'
-          : '<button class="btn btn-primary btn-sm" data-act="resolve" data-id="' + a.id + '">Resolve</button>' +
-            '<button class="btn btn-ghost btn-sm" data-act="mute" data-id="' + a.id + '">Mute</button>';
-        return '<div class="arow ' + (done ? "done" : "") + '">' +
-          '<span class="sev ' + a.sev + '" aria-hidden="true"></span>' +
-          '<div><div class="who">' + esc(a.who) + '</div><div class="what">' + esc(a.what) + '</div></div>' +
-          '<span class="pill">→ ' + esc(a.route) + '</span>' +
-          '<span class="actions">' + actions + '</span>' +
-          '</div>';
-      }).join("");
+    function fmtChange(ct) {
+      return ({ GST_SUSPENDED: "GST status → suspended", BANK_CHANGE: "Bank account → changed", MSME_DUES_43B: "43B(h) MSME dues due soon", MSME_CLASS_SHIFT: "MSME class → shifted" })[ct] || ct;
     }
-    $("#room").addEventListener("click", function (e) {
-      var b = e.target.closest("[data-act]"); if (!b) return;
-      var id = +b.getAttribute("data-id"), act = b.getAttribute("data-act");
-      var a = ALERTS.filter(function (x) { return x.id === id; })[0]; if (!a) return;
-      a.status = act === "resolve" ? "RESOLVED" : "MUTED";
-      toast(act === "resolve" ? "Resolved · audit record written" : "Muted for this vendor");
-      // re-render tiles + list
-      renderCompliance(USERS["priya@demo.in"]);
+
+    /* ---- Priya: LIVE compliance dashboard ---- */
+    async function renderCompliance() {
+      $("#room").innerHTML =
+        '<div class="roomhead"><p class="eyebrow">Compliance</p><h2>Vendors that need you today</h2>' +
+        '<p>Sorted by urgency, each alert already routed to whoever can act on it. Resolving one writes a permanent audit record.</p></div>' +
+        liveBanner +
+        '<div id="cmp"><p style="color:var(--ink-mute);padding:.5rem 0">Loading your alerts…</p></div>';
+      var r = await api("/v1/compliance/alerts");
+      if (r.status !== 200) {
+        $("#cmp").innerHTML = '<div class="card"><div style="padding:1.2rem;color:var(--crit)">Couldn\'t load alerts (' + r.status + '). Try signing out and back in.</div></div>';
+        return;
+      }
+      drawCompliance((r.data && r.data.alerts) || []);
+    }
+    var CURRENT_ALERTS = [];
+    var FILTER = "all";
+    function drawCompliance(alerts) { CURRENT_ALERTS = alerts; FILTER = "all"; renderCmp(); }
+    function isMsme(a) { return a.msme && a.msme !== "NOT_APPLICABLE"; }
+    function alertMatches(a) {
+      if (FILTER === "all") return true;
+      if (FILTER === "critical") return a.severity === "CRITICAL";
+      if (FILTER === "msme") return isMsme(a);
+      return a.routed_to_role === FILTER;
+    }
+    function tileF(k, v, cls, f) {
+      return '<button type="button" class="tile tilebtn' + (FILTER === f ? " active" : "") + '" data-tile="' + f + '" aria-pressed="' + (FILTER === f) + '">' +
+        '<div class="k">' + esc(k) + '</div><div class="v ' + (cls || "") + '">' + v + '</div></button>';
+    }
+    function renderCmp() {
+      var all = CURRENT_ALERTS;
+      var crit = all.filter(function (a) { return a.severity === "CRITICAL"; }).length;
+      var fin = all.filter(function (a) { return a.routed_to_role === "FINANCE"; }).length;
+      var comp = all.filter(function (a) { return a.routed_to_role === "COMPLIANCE"; }).length;
+      var msme = all.filter(isMsme).length;
+      var tiles = '<div class="tiles">' +
+        tileF("Open alerts", all.length, "", "all") +
+        tileF("Critical", crit, "crit", "critical") +
+        tileF("→ Finance", fin, "", "FINANCE") +
+        tileF("→ Compliance", comp, "", "COMPLIANCE") +
+        tileF("MSME vendors", msme, "", "msme") + '</div>';
+      var shown = all.filter(alertMatches);
+      var head = 'Alerts' + (FILTER === "all" ? "" : ' <span style="font-family:var(--sans);font-weight:400;font-size:.8rem;color:var(--ink-mute)">· filtered · <button type="button" data-tile="all" style="background:none;border:0;color:var(--accent);cursor:pointer;font:inherit;padding:0;text-decoration:underline">show all</button></span>');
+      var rows = shown.length
+        ? shown.map(function (a) {
+            var tag = isMsme(a) ? ' <span class="msmetag" title="MSME classification">MSME · ' + esc(a.msme) + '</span>' : '';
+            return '<div class="arow">' +
+              '<span class="sev ' + esc(a.severity) + '" aria-hidden="true"></span>' +
+              '<div><div class="who">' + esc(a.vendor_name || a.vendor_id) + tag + '</div><div class="what">' + esc(fmtChange(a.change_type)) + '</div></div>' +
+              '<span class="pill">→ ' + esc(a.routed_to_role) + '</span>' +
+              '<span class="actions"><button class="btn btn-primary btn-sm" data-act="RESOLVE" data-id="' + esc(a.id) + '">Resolve</button>' +
+              '<button class="btn btn-ghost btn-sm" data-act="MUTE" data-id="' + esc(a.id) + '">Mute</button></span>' +
+              '</div>';
+          }).join("")
+        : '<div style="padding:1.4rem;color:var(--ink-mute)">' + (all.length ? "No alerts match this filter." : "All clear — no open alerts right now. 🎉") + '</div>';
+      $("#cmp").innerHTML = tiles + '<div class="card"><h3>' + head + '</h3>' + rows + '</div>';
+    }
+
+    // Delegated tile-filter + resolve/mute (attached once; #cmp is replaced on re-render).
+    $("#room").addEventListener("click", async function (e) {
+      var tb = e.target.closest("[data-tile]");
+      if (tb && SESSION && SESSION.role === "COMPLIANCE") { FILTER = tb.getAttribute("data-tile"); renderCmp(); return; }
+      var b = e.target.closest("[data-act]"); if (!b || !SESSION || SESSION.role !== "COMPLIANCE") return;
+      b.disabled = true;
+      var r = await api("/v1/alerts/act", { method: "POST", body: { alertId: b.getAttribute("data-id"), action: b.getAttribute("data-act") } });
+      if (r.status === 200) {
+        toast(b.getAttribute("data-act") === "RESOLVE" ? "Resolved · audit record written" : "Muted for this vendor");
+        renderCompliance();
+      } else {
+        toast("Action failed (" + r.status + ")"); b.disabled = false;
+      }
     });
 
-    /* ---- Ravi: vendor room ---- */
-    function renderVendor(u) {
+    /* ---- Ravi: vendor room (sample for now) ---- */
+    function renderVendor(prof) {
+      var SHARES = ["Acme Manufacturing", "Sunrise Retail"];
       $("#room").innerHTML =
         '<div class="roomhead"><p class="eyebrow">Your trust passport</p><h2>Verified once. Reused everywhere.</h2>' +
         '<p>Share this same government-verified profile with any buyer in one click — no re-uploading documents.</p></div>' +
-        banner +
+        demoBanner +
         '<div class="grid2">' +
           '<div class="card">' +
             '<div class="pp-head"><span class="seal" aria-hidden="true">✓</span>' +
-            '<div><h3 style="border:0;padding:0;font-family:var(--serif)">' + esc(u.org) + '</h3>' +
+            '<div><h3 style="border:0;padding:0;font-family:var(--serif)">' + esc(prof.org || "Ravi Logistics Pvt Ltd") + '</h3>' +
             '<span class="statustag">✓ Active · Government-verified</span></div></div>' +
             '<dl class="kv"><dt>GSTIN</dt><dd>27AAAAA1111A1Z1</dd><dt>PAN</dt><dd>AAAAA1111A</dd>' +
             '<dt>MSME</dt><dd>SMALL · Udyam</dd><dt>Last checked</dt><dd>2h ago</dd></dl>' +
@@ -355,6 +400,7 @@
             '<form class="inline-form" id="shareForm"><label class="sr-only" for="buyerName">Buyer name</label>' +
             '<input id="buyerName" placeholder="Add a buyer…" /><button class="btn btn-primary btn-sm" type="submit">Share</button></form></div>' +
         '</div>';
+      function drawShares() { $("#shareList").innerHTML = SHARES.map(function (s) { return '<li><span>' + esc(s) + '</span><span class="statuspill">✓ Trusted</span></li>'; }).join(""); }
       drawShares();
       var bar = $("#repbar"); requestAnimationFrame(function () { requestAnimationFrame(function () { bar.style.width = "63%"; }); });
       $("#shareForm").addEventListener("submit", function (e) {
@@ -364,29 +410,35 @@
         toast("Shared with " + name + " · no re-upload");
       });
     }
-    function drawShares() {
-      $("#shareList").innerHTML = SHARES.map(function (s) {
-        return '<li><span>' + esc(s) + '</span><span class="statuspill">✓ Trusted</span></li>';
-      }).join("");
-    }
 
-    /* ---- Ananya: admin room ---- */
-    var CONNS = [
-      { name: "Oracle Fusion", desc: "Push · verified data written to your supplier master", on: true },
-      { name: "SAP S/4HANA", desc: "Pull · SAP fetches changes on its own schedule", on: false }
-    ];
-    var TEAM = [{ name: "Priya Menon", email: "priya@demo.in", role: "Compliance" }];
-    function renderAdmin(u) {
+    /* ---- Ananya: admin room (sample for now) ---- */
+    function renderAdmin(prof) {
+      var CONNS = [
+        { name: "Oracle Fusion", desc: "Push · verified data written to your supplier master", on: true },
+        { name: "SAP S/4HANA", desc: "Pull · SAP fetches changes on its own schedule", on: false }
+      ];
+      var TEAM = [{ name: "Priya Menon", email: "priya@demo.in", role: "Compliance" }];
       $("#room").innerHTML =
-        '<div class="roomhead"><p class="eyebrow">Administration · ' + esc(u.org) + '</p><h2>Connections & team</h2>' +
+        '<div class="roomhead"><p class="eyebrow">Administration · ' + esc(prof.org || "Acme Manufacturing") + '</p><h2>Connections & team</h2>' +
         '<p>Connect your ERP and invite the people who watch your vendors. Only you can do this.</p></div>' +
-        banner +
+        demoBanner +
         '<div class="grid2">' +
           '<div class="card"><h3>ERP connections</h3><div id="connList"></div></div>' +
           '<div class="card"><h3>Compliance team</h3><ul class="shares" id="teamList"></ul>' +
             '<form class="inline-form" id="inviteForm"><label class="sr-only" for="invEmail">Invite email</label>' +
             '<input id="invEmail" type="email" placeholder="name@acme.in" /><button class="btn btn-primary btn-sm" type="submit">Invite</button></form></div>' +
         '</div>';
+      function drawConns() {
+        $("#connList").innerHTML = CONNS.map(function (c, i) {
+          return '<div class="conn"><div><div class="name">' + esc(c.name) + '</div><div class="desc">' + esc(c.desc) + '</div></div>' +
+            '<div style="display:flex;align-items:center;gap:.6rem"><span class="dot ' + (c.on ? "on" : "off") + '" aria-hidden="true"></span>' +
+            '<button class="btn btn-ghost btn-sm" data-conn="' + i + '">' + (c.on ? "Connected" : "Connect") + '</button></div></div>';
+        }).join("");
+        Array.prototype.forEach.call($("#connList").querySelectorAll("[data-conn]"), function (b) {
+          b.addEventListener("click", function () { var c = CONNS[+b.getAttribute("data-conn")]; c.on = !c.on; drawConns(); toast(c.name + (c.on ? " connected" : " disconnected")); });
+        });
+      }
+      function drawTeam() { $("#teamList").innerHTML = TEAM.map(function (t) { return '<li><span>' + esc(t.name) + ' · <span style="color:var(--ink-mute);font-size:.85em">' + esc(t.email) + '</span></span><span class="pill">' + esc(t.role) + '</span></li>'; }).join(""); }
       drawConns(); drawTeam();
       $("#inviteForm").addEventListener("submit", function (e) {
         e.preventDefault();
@@ -395,24 +447,6 @@
         $("#invEmail").value = ""; drawTeam();
         toast("Invite sent to " + em + " · role locked to Compliance");
       });
-    }
-    function drawConns() {
-      $("#connList").innerHTML = CONNS.map(function (c, i) {
-        return '<div class="conn"><div><div class="name">' + esc(c.name) + '</div><div class="desc">' + esc(c.desc) + '</div></div>' +
-          '<div style="display:flex;align-items:center;gap:.6rem"><span class="dot ' + (c.on ? "on" : "off") + '" aria-hidden="true"></span>' +
-          '<button class="btn btn-ghost btn-sm" data-conn="' + i + '">' + (c.on ? "Connected" : "Connect") + '</button></div></div>';
-      }).join("");
-      Array.prototype.forEach.call(document.querySelectorAll("[data-conn]"), function (b) {
-        b.addEventListener("click", function () {
-          var c = CONNS[+b.getAttribute("data-conn")]; c.on = !c.on; drawConns();
-          toast(c.name + (c.on ? " connected" : " disconnected"));
-        });
-      });
-    }
-    function drawTeam() {
-      $("#teamList").innerHTML = TEAM.map(function (t) {
-        return '<li><span>' + esc(t.name) + ' · <span style="color:var(--ink-mute);font-size:.85em">' + esc(t.email) + '</span></span><span class="pill">' + esc(t.role) + '</span></li>';
-      }).join("");
     }
   })();
 </script>

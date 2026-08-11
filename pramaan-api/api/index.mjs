@@ -11150,30 +11150,24 @@ async function inviteComplianceUser(db, admin, input) {
 // src/alerts/dashboard.ts
 async function listPendingAlerts(db, claims, opts = {}) {
   requireRole(claims, ["COMPLIANCE"]);
-  try {
-    await db.query("begin");
-    await db.query("set local role authenticated");
-    await db.query("select set_config($1, $2, true)", ["app.current_buyer_id", claims.buyerId]);
-    const params = [];
-    let filter = "where status in ('NEW', 'ASSIGNED')";
-    if (opts.routedToRole) {
-      params.push(opts.routedToRole);
-      filter += ` and routed_to_role = $${params.length}`;
-    }
-    const { rows } = await db.query(
-      `select id, vendor_id, change_type, severity, affected_process,
-              routed_to_role, status, created_at
-         from alerts
-         ${filter}
-        order by severity desc, created_at desc`,
-      params
-    );
-    await db.query("commit");
-    return rows;
-  } catch (err) {
-    await db.query("rollback");
-    throw err;
+  const params = [claims.buyerId];
+  let filter = "where a.buyer_id = $1 and a.status in ('NEW', 'ASSIGNED')";
+  if (opts.routedToRole) {
+    params.push(opts.routedToRole);
+    filter += ` and a.routed_to_role = $${params.length}`;
   }
+  const { rows } = await db.query(
+    `select a.id, a.vendor_id, v.legal_name as vendor_name,
+            p.msme_classification as msme, a.change_type,
+            a.severity, a.affected_process, a.routed_to_role, a.status, a.created_at
+       from alerts a
+       join vendors v on v.id = a.vendor_id
+       left join trust_passports p on p.vendor_id = a.vendor_id
+       ${filter}
+      order by a.severity desc, a.created_at desc`,
+    params
+  );
+  return rows;
 }
 
 // src/alerts/actions.ts

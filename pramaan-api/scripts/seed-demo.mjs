@@ -54,8 +54,14 @@ try {
   await db.query(`insert into users (email, password_hash, role, vendor_id, status) values ($1,$2,'VENDOR',$3,'ACTIVE')`, ['ravi@demo.in', pw, V_RAVI]);
   await db.query(`insert into consent_records (vendor_id, purpose, consent_given_at, consent_manager_ref) values ($1,'Continuous verification under DPDP', now() - interval '240 days','cm-demo')`, [V_RAVI]);
 
-  // ---- two more vendors for the alert dashboard ----
+  // ---- two more vendors for the alert dashboard (with MSME tiers) ----
   await db.query(`insert into vendors (id, legal_name, vendor_type) values ($1,'Meher Textiles','Partnership'), ($2,'Kadam Suppliers','Private Limited')`, [V_MEHER, V_KADAM]);
+  await db.query(
+    `insert into trust_passports (vendor_id, gst_number, registered_address, msme_classification, status)
+     values ($1,'27BBBBB2222B2Z2',$3,'NOT_APPLICABLE','ACTIVE'),
+            ($2,'27CCCCC3333C3Z3',$3,'SMALL','ACTIVE')`,
+    [V_MEHER, V_KADAM, JSON.stringify({})],
+  );
 
   // ---- links (Acme <-> vendors) ----
   await db.query(
