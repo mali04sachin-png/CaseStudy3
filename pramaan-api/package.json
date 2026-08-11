@@ -5,11 +5,18 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts",
+    "bundle": "node scripts/build.mjs"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
   }
 }

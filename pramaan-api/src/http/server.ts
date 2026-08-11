@@ -24,6 +24,33 @@ export interface ServerDeps {
   grvl: GRVL;
 }
 
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? '*';
+
+/** Allow the browser frontend (a different origin) to call this API. */
+export function applyCors(res: http.ServerResponse): void {
+  res.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'authorization, content-type');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (CORS_ORIGIN !== '*') res.setHeader('Vary', 'Origin');
+}
+
+/** CORS + preflight, then route. Used by both the local server and the
+ *  serverless handler; the caller supplies deps (a per-request db client). */
+export async function handle(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  deps: ServerDeps,
+): Promise<void> {
+  applyCors(res);
+  if ((req.method ?? 'GET') === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+  return routeRequest(req, res, deps);
+}
+
 function readJson(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
     let body = '';
@@ -52,11 +79,24 @@ function bearer(req: http.IncomingMessage): string {
 }
 
 export function createServer(deps: ServerDeps): http.Server {
-  return http.createServer(async (req, res) => {
+  return http.createServer((req, res) => handle(req, res, deps));
+}
+
+/** The route table. Errors are mapped to their HTTP status here. */
+export async function routeRequest(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  deps: ServerDeps,
+): Promise<void> {
+  {
     try {
       const parsed = new URL(req.url ?? '/', 'http://localhost');
       const url = parsed.pathname;
       const method = req.method ?? 'GET';
+
+      if (method === 'GET' && (url === '/health' || url === '/')) {
+        return send(res, 200, { ok: true, service: 'pramaan-api' });
+      }
 
       if (method === 'POST' && url === '/v1/auth/login') {
         const { email, password } = await readJson(req);
@@ -132,5 +172,5 @@ export function createServer(deps: ServerDeps): http.Server {
       const message = err instanceof Error ? err.message : 'Internal error';
       return send(res, status, { error: message });
     }
-  });
+  }
 }
