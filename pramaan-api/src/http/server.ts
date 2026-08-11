@@ -19,7 +19,8 @@ import { listConnections, setConnection } from '../erp/connections.ts';
 import { submitConsent, submitKyc, withdrawConsent, getMyVendor } from '../services/vendor-kyc.ts';
 import { setDiscoverable, searchDirectory, onboardVendor } from '../directory/directory.ts';
 import { requireRole } from '../auth/guard.ts';
-import { AppError, AuthenticationError, AuthorizationError } from '../auth/errors.ts';
+import { AppError, AuthenticationError, AuthorizationError, ValidationError } from '../auth/errors.ts';
+import { isValidGSTIN } from '../verification/validation.ts';
 import type { GRVL } from '../verification/grvl.ts';
 
 export interface ServerDeps {
@@ -99,6 +100,14 @@ export async function routeRequest(
 
       if (method === 'GET' && (url === '/health' || url === '/')) {
         return send(res, 200, { ok: true, service: 'pramaan-api' });
+      }
+
+      // On-demand GST verification (real provider if configured, else mock).
+      if (method === 'GET' && url === '/v1/verify/gstin') {
+        verifyToken(bearer(req)); // any signed-in user
+        const gst = (parsed.searchParams.get('gst') ?? '').toUpperCase();
+        if (!isValidGSTIN(gst)) throw new ValidationError('Invalid GSTIN format');
+        return send(res, 200, await deps.grvl.verifyGSTIN(gst));
       }
 
       if (method === 'POST' && url === '/v1/auth/login') {

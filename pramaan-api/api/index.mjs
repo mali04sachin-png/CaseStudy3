@@ -11639,6 +11639,12 @@ async function routeRequest(req, res, deps) {
       if (method === "GET" && (url === "/health" || url === "/")) {
         return send(res, 200, { ok: true, service: "pramaan-api" });
       }
+      if (method === "GET" && url === "/v1/verify/gstin") {
+        verifyToken(bearer(req));
+        const gst = (parsed.searchParams.get("gst") ?? "").toUpperCase();
+        if (!isValidGSTIN(gst)) throw new ValidationError("Invalid GSTIN format");
+        return send(res, 200, await deps.grvl.verifyGSTIN(gst));
+      }
       if (method === "POST" && url === "/v1/auth/login") {
         const { email, password } = await readJson(req);
         const { token, claims } = await login(deps.db, email, password);
@@ -11851,8 +11857,8 @@ var GRVL = class {
   secondary;
   breaker;
   timeoutMs;
-  constructor(primary, secondary, opts = {}) {
-    this.primary = primary;
+  constructor(primary2, secondary, opts = {}) {
+    this.primary = primary2;
     this.secondary = secondary;
     this.breaker = opts.breaker ?? new CircuitBreaker();
     this.timeoutMs = opts.timeoutMs ?? 5e3;
@@ -11923,11 +11929,44 @@ var MockVerificationProvider = class {
   }
 };
 
+// src/verification/providers/appyflow.ts
+function mapStatus(sts) {
+  if (/active/i.test(sts)) return "ACTIVE";
+  if (/cancel/i.test(sts)) return "CANCELLED";
+  if (/suspend/i.test(sts)) return "SUSPENDED";
+  return null;
+}
+var AppyFlowProvider = class {
+  constructor(keySecret) {
+    this.keySecret = keySecret;
+  }
+  name = "AppyFlow";
+  async verifyGSTIN(gstin) {
+    const url = "https://appyflow.in/api/verifyGST?gstNo=" + encodeURIComponent(gstin) + "&key_secret=" + encodeURIComponent(this.keySecret);
+    const res = await fetch(url, { headers: { "content-type": "application/json" } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+      throw new Error(data && data.message ? String(data.message) : `AppyFlow HTTP ${res.status}`);
+    }
+    const info = data.taxpayerInfo || data;
+    return {
+      field: "gst_number",
+      input: gstin,
+      status: "VALID",
+      legalName: info.lgnm || info.tradeNam || null,
+      gstStatus: mapStatus(String(info.sts || "")),
+      registrationDate: info.rgdt || null,
+      sourceRegistry: "GSTN",
+      sourceProvider: this.name,
+      raw: data,
+      verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+  }
+};
+
 // api/_entry.ts
-var grvl = new GRVL(
-  new MockVerificationProvider({ name: "eKYCNow" }),
-  new MockVerificationProvider({ name: "Deepvue" })
-);
+var primary = process.env.APPYFLOW_KEY ? new AppyFlowProvider(process.env.APPYFLOW_KEY) : new MockVerificationProvider({ name: "eKYCNow" });
+var grvl = new GRVL(primary, new MockVerificationProvider({ name: "Deepvue" }));
 async function handler(req, res) {
   const path = (req.url || "/").split("?")[0];
   if (req.method === "OPTIONS" || path === "/health" || path === "/") {
