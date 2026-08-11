@@ -737,6 +737,16 @@ async function loadBuyerData(self) {
     };
   });
   self.setState({ alerts });
+  if (AUTH.role === "BUYER_ADMIN") {
+    const ires = await apiFetch("/v1/integrations");
+    const list = (ires.data && ires.data.integrations) || [];
+    const st = {};
+    list.forEach(function (c) {
+      const key = c.erp_type === "ORACLE_FUSION" ? "oracle" : c.erp_type === "SAP_ARIBA" ? "sap" : null;
+      if (key) st[key] = c.connection_status === "CONNECTED" ? "connected" : "idle";
+    });
+    self.setState(st);
+  }
 }
 
 class Component extends DCLogic {
@@ -1038,8 +1048,20 @@ class Component extends DCLogic {
       oracleIdle: this.state.oracle === "idle", oracleConnecting: this.state.oracle === "connecting", oracleConnected: this.state.oracle === "connected",
       sapIdle: this.state.sap === "idle", sapConnecting: this.state.sap === "connecting", sapConnected: this.state.sap === "connected",
       oracleDate: this.state.oracleDate, sapDate: this.state.sapDate,
-      connectOracle: () => { this.setState({ oracle: "connecting" }); setTimeout(() => this.setState({ oracle: "connected", oracleDate: "just now" }), 1200); },
-      connectSap: () => { this.setState({ sap: "connecting" }); setTimeout(() => this.setState({ sap: "connected", sapDate: "just now" }), 1200); },
+      connectOracle: () => {
+        const self = this;
+        self.setState({ oracle: "connecting" });
+        apiFetch("/v1/integrations/oracle/connect", { method: "POST", body: { connect: true } }).then(function (r) {
+          self.setState(r.status === 200 ? { oracle: "connected", oracleDate: "just now" } : { oracle: "idle" });
+        });
+      },
+      connectSap: () => {
+        const self = this;
+        self.setState({ sap: "connecting" });
+        apiFetch("/v1/integrations/sap/connect", { method: "POST", body: { connect: true } }).then(function (r) {
+          self.setState(r.status === 200 ? { sap: "connected", sapDate: "just now" } : { sap: "idle" });
+        });
+      },
 
       showGaps: this.state.showGaps, toggleGaps: () => this.setState(s => ({ showGaps: !s.showGaps }))
     };
