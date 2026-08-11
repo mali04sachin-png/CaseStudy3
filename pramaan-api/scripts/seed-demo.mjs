@@ -16,8 +16,10 @@ const ACME = '10000000-0000-0000-0000-000000000001';
 const V_RAVI = '20000000-0000-0000-0000-000000000001';
 const V_MEHER = '20000000-0000-0000-0000-000000000002';
 const V_KADAM = '20000000-0000-0000-0000-000000000003';
+const V_SUN = '20000000-0000-0000-0000-000000000004'; // discoverable, not linked to Acme
+const V_DEC = '20000000-0000-0000-0000-000000000005'; // discoverable, not linked to Acme
 const emails = ['ravi@demo.in', 'priya@demo.in', 'ananya@demo.in'];
-const vendors = [V_RAVI, V_MEHER, V_KADAM];
+const vendors = [V_RAVI, V_MEHER, V_KADAM, V_SUN, V_DEC];
 
 await db.connect();
 try {
@@ -62,6 +64,32 @@ try {
             ($2,'27CCCCC3333C3Z3',$3,'SMALL','ACTIVE')`,
     [V_MEHER, V_KADAM, JSON.stringify({})],
   );
+
+  // ---- directory vendors: verified elsewhere in Pramaan, discoverable, NOT
+  //      linked to Acme (so Acme can find + one-click onboard them) ----
+  await db.query(
+    `insert into vendors (id, legal_name, vendor_type)
+     values ($1,'Sunrise Retail Supplies','Private Limited'),($2,'Deccan Exports','Partnership')`,
+    [V_SUN, V_DEC],
+  );
+  const { rows: dp } = await db.query(
+    `insert into trust_passports
+        (vendor_id, gst_number, pan_number, registered_address, msme_classification, status, is_discoverable, created_at)
+     values ($1,'27SUNRS4001S1Z1','SUNRS4001S',$3,'MICRO','ACTIVE',true, now() - interval '400 days'),
+            ($2,'27DECAN5002D2Z2','DECAN5002D',$3,'MEDIUM','ACTIVE',true, now() - interval '150 days')
+     returning id, vendor_id`,
+    [V_SUN, V_DEC, JSON.stringify({})],
+  );
+  for (const row of dp) {
+    const n = row.vendor_id === V_SUN ? 8 : 4; // reputation depth
+    for (let i = 0; i < n; i++) {
+      await db.query(
+        `insert into verification_records (passport_id, field_name, source_registry, source_provider, verified_value, status, verified_at)
+         values ($1,'gst_number','GSTN','eKYCNow','{"status":"ACTIVE"}','VALID', now() - interval '1 day' * $2)`,
+        [row.id, i * 20],
+      );
+    }
+  }
 
   // ---- links (Acme <-> vendors) ----
   await db.query(

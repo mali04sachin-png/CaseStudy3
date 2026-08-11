@@ -17,6 +17,7 @@ import { shareProfile } from '../sharing/share.ts';
 import { getVendorReputation } from '../sharing/reputation.ts';
 import { listConnections, setConnection } from '../erp/connections.ts';
 import { submitConsent, submitKyc, withdrawConsent, getMyVendor } from '../services/vendor-kyc.ts';
+import { setDiscoverable, searchDirectory, onboardVendor } from '../directory/directory.ts';
 import { requireRole } from '../auth/guard.ts';
 import { AppError, AuthenticationError, AuthorizationError } from '../auth/errors.ts';
 import type { GRVL } from '../verification/grvl.ts';
@@ -179,6 +180,18 @@ export async function routeRequest(
       if (method === 'POST' && url === '/v1/vendor/withdraw') {
         return send(res, 200, await withdrawConsent(deps.db, verifyToken(bearer(req))));
       }
+      if (method === 'POST' && url === '/v1/vendor/discoverable') {
+        const claims = verifyToken(bearer(req));
+        const body = await readJson(req);
+        return send(res, 200, await setDiscoverable(deps.db, claims, body.enabled !== false));
+      }
+
+      // Verified-vendor directory (cross-buyer discovery + one-click onboard).
+      if (method === 'GET' && url === '/v1/directory/vendors') {
+        const claims = verifyToken(bearer(req));
+        const items = await searchDirectory(deps.db, claims, parsed.searchParams.get('q') ?? undefined);
+        return send(res, 200, { vendors: items });
+      }
 
       let m: RegExpMatchArray | null;
 
@@ -188,6 +201,12 @@ export async function routeRequest(
         const body = await readJson(req);
         const result = await setConnection(deps.db, claims, m[1], body.connect !== false);
         return send(res, 200, result);
+      }
+
+      // Onboard a discoverable vendor into the caller's tenant.
+      if (method === 'POST' && (m = url.match(/^\/v1\/directory\/vendors\/([^/]+)\/onboard$/))) {
+        const claims = verifyToken(bearer(req));
+        return send(res, 201, await onboardVendor(deps.db, claims, m[1]));
       }
 
       // Pull API (Phase 7) — path param buyer_id + query string.
