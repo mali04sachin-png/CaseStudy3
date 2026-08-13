@@ -11588,6 +11588,154 @@ async function onboardVendor(db, claims, vendorId) {
   return { ok: true, vendorId, buyerId: claims.buyerId, newlyOnboarded: rows.length > 0 };
 }
 
+// src/verification/providers/gstincheck.ts
+var CACHE = /* @__PURE__ */ new Map();
+var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function mapStatus(sts) {
+  if (/active/i.test(sts)) return "ACTIVE";
+  if (/cancel/i.test(sts)) return "CANCELLED";
+  if (/suspend|provisional|inactive/i.test(sts)) return "SUSPENDED";
+  return null;
+}
+async function callOnce(apiKey, gstin) {
+  const url = "https://sheet.gstincheck.co.in/check/" + encodeURIComponent(apiKey) + "/" + encodeURIComponent(gstin);
+  const res = await fetch(url);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.flag === false || !body.data && !body.lgnm) {
+    throw new Error(body && body.message ? String(body.message) : `GSTINCheck HTTP ${res.status}`);
+  }
+  const info = body.data || body;
+  return {
+    field: "gst_number",
+    input: gstin,
+    status: "VALID",
+    legalName: info.lgnm || info.tradeNam || null,
+    gstStatus: mapStatus(String(info.sts || "")),
+    registrationDate: info.rgdt || null,
+    sourceRegistry: "GSTN",
+    sourceProvider: "GSTINCheck",
+    raw: body,
+    verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+async function gstinCheckLookup(apiKey, gstin) {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await callOnce(apiKey, gstin);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 2) await sleep(700);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("GSTINCheck failed");
+}
+var GstinCheckProvider = class {
+  name = "GSTINCheck";
+  apiKey;
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+  }
+  // On-demand verification caches a successful (real) result in memory, so a warm
+  // instance answers repeat manual lookups instantly. Monitoring bypasses this.
+  async verifyGSTIN(gstin) {
+    const cached = CACHE.get(gstin);
+    if (cached) return cached;
+    const result = await gstinCheckLookup(this.apiKey, gstin);
+    CACHE.set(gstin, result);
+    return result;
+  }
+};
+
+// src/monitor/scan.ts
+function toVendorStatus(gst) {
+  if (gst === "ACTIVE") return "ACTIVE";
+  if (gst === "SUSPENDED") return "SUSPENDED";
+  if (gst === "CANCELLED") return "DEREGISTERED";
+  return null;
+}
+function classify(before, after) {
+  if (after === "DEREGISTERED") return { changeType: "GST_CANCELLED", severity: "CRITICAL" };
+  if (after === "SUSPENDED") return { changeType: "GST_SUSPENDED", severity: "HIGH" };
+  if (after === "ACTIVE") return { changeType: "GST_REACTIVATED", severity: "LOW" };
+  return { changeType: "GST_STATUS_CHANGE", severity: "MEDIUM" };
+}
+async function runMonitorScan(db, buyerId) {
+  const apiKey = process.env.GSTINCHECK_KEY;
+  if (!apiKey) throw new Error("GSTINCHECK_KEY not configured \u2014 cannot run a live scan");
+  const { rows } = await db.query(
+    `select p.id as passport_id, v.id as vendor_id, v.legal_name, p.gst_number, p.status
+       from trust_passports p
+       join vendors v on v.id = p.vendor_id
+       join buyer_vendor_links bvl on bvl.vendor_id = v.id and bvl.buyer_id = $1
+      where p.monitored = true and p.gst_number is not null
+      order by v.legal_name`,
+    [buyerId]
+  );
+  const summary = {
+    buyerId,
+    scannedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    provider: "GSTINCheck",
+    scanned: rows.length,
+    changed: [],
+    unchanged: [],
+    failed: [],
+    alertsRaised: 0
+  };
+  for (const r of rows) {
+    let result;
+    try {
+      result = await gstinCheckLookup(apiKey, r.gst_number);
+    } catch (e) {
+      await db.query(
+        `insert into verification_records (passport_id, field_name, source_registry, source_provider, verified_value, status)
+         values ($1,'gst_number','GSTN','GSTINCheck',$2,'DEGRADED')`,
+        [r.passport_id, JSON.stringify({ error: String(e && e.message || e) })]
+      );
+      summary.failed.push({ vendor: r.legal_name, gstin: r.gst_number, reason: String(e && e.message || e) });
+      continue;
+    }
+    await db.query(
+      `insert into verification_records (passport_id, field_name, source_registry, source_provider, verified_value, status)
+       values ($1,'gst_number','GSTN','GSTINCheck',$2,'VALID')`,
+      [r.passport_id, JSON.stringify({ gstStatus: result.gstStatus, legalName: result.legalName })]
+    );
+    const after = toVendorStatus(result.gstStatus);
+    const before = r.status;
+    if (after && after !== before) {
+      const { changeType, severity } = classify(before, after);
+      await db.query(
+        `update trust_passports set status = $1, gst_last_verified_at = now(), updated_at = now() where id = $2`,
+        [after, r.passport_id]
+      );
+      await db.query(
+        `insert into alerts (vendor_id, buyer_id, change_type, severity, affected_process, routed_to_role, raw_delta, status)
+         values ($1,$2,$3,$4,'TAX','FINANCE',$5,'NEW')`,
+        [
+          r.vendor_id,
+          buyerId,
+          changeType,
+          severity,
+          JSON.stringify({ before, after, gstStatus: result.gstStatus, legalName: result.legalName })
+        ]
+      );
+      summary.changed.push({
+        vendor: r.legal_name,
+        gstin: r.gst_number,
+        from: before,
+        to: after,
+        changeType,
+        severity
+      });
+      summary.alertsRaised++;
+    } else {
+      await db.query(`update trust_passports set gst_last_verified_at = now() where id = $1`, [r.passport_id]);
+      summary.unchanged.push({ vendor: r.legal_name, gstin: r.gst_number, status: before });
+    }
+  }
+  return summary;
+}
+
 // src/http/server.ts
 var CORS_ORIGIN = process.env.CORS_ORIGIN ?? "*";
 function applyCors(res) {
@@ -11674,6 +11822,12 @@ async function routeRequest(req, res, deps) {
         const claims = verifyToken(bearer(req));
         const alerts = await listPendingAlerts(deps.db, claims);
         return send(res, 200, { alerts });
+      }
+      if (method === "POST" && url === "/v1/monitor/scan") {
+        const claims = verifyToken(bearer(req));
+        requireRole(claims, ["COMPLIANCE", "BUYER_ADMIN"]);
+        if (!claims.buyerId) throw new AuthorizationError("No tenant bound to this token");
+        return send(res, 200, await runMonitorScan(deps.db, claims.buyerId));
       }
       if (method === "POST" && url === "/v1/alerts/act") {
         const claims = verifyToken(bearer(req));
@@ -11930,7 +12084,7 @@ var MockVerificationProvider = class {
 };
 
 // src/verification/providers/appyflow.ts
-function mapStatus(sts) {
+function mapStatus2(sts) {
   if (/active/i.test(sts)) return "ACTIVE";
   if (/cancel/i.test(sts)) return "CANCELLED";
   if (/suspend/i.test(sts)) return "SUSPENDED";
@@ -11954,64 +12108,11 @@ var AppyFlowProvider = class {
       input: gstin,
       status: "VALID",
       legalName: info.lgnm || info.tradeNam || null,
-      gstStatus: mapStatus(String(info.sts || "")),
-      registrationDate: info.rgdt || null,
-      sourceRegistry: "GSTN",
-      sourceProvider: this.name,
-      raw: data,
-      verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-  }
-};
-
-// src/verification/providers/gstincheck.ts
-var CACHE = /* @__PURE__ */ new Map();
-var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-function mapStatus2(sts) {
-  if (/active/i.test(sts)) return "ACTIVE";
-  if (/cancel/i.test(sts)) return "CANCELLED";
-  if (/suspend|provisional|inactive/i.test(sts)) return "SUSPENDED";
-  return null;
-}
-var GstinCheckProvider = class {
-  constructor(apiKey) {
-    this.apiKey = apiKey;
-  }
-  name = "GSTINCheck";
-  async verifyGSTIN(gstin) {
-    const cached = CACHE.get(gstin);
-    if (cached) return cached;
-    let lastErr;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const result = await this.callOnce(gstin);
-        CACHE.set(gstin, result);
-        return result;
-      } catch (e) {
-        lastErr = e;
-        if (attempt < 2) await sleep(700);
-      }
-    }
-    throw lastErr instanceof Error ? lastErr : new Error("GSTINCheck failed");
-  }
-  async callOnce(gstin) {
-    const url = "https://sheet.gstincheck.co.in/check/" + encodeURIComponent(this.apiKey) + "/" + encodeURIComponent(gstin);
-    const res = await fetch(url);
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok || body.flag === false || !body.data && !body.lgnm) {
-      throw new Error(body && body.message ? String(body.message) : `GSTINCheck HTTP ${res.status}`);
-    }
-    const info = body.data || body;
-    return {
-      field: "gst_number",
-      input: gstin,
-      status: "VALID",
-      legalName: info.lgnm || info.tradeNam || null,
       gstStatus: mapStatus2(String(info.sts || "")),
       registrationDate: info.rgdt || null,
       sourceRegistry: "GSTN",
       sourceProvider: this.name,
-      raw: body,
+      raw: data,
       verifiedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
   }

@@ -18,6 +18,7 @@ import { getVendorReputation } from '../sharing/reputation.ts';
 import { listConnections, setConnection } from '../erp/connections.ts';
 import { submitConsent, submitKyc, withdrawConsent, getMyVendor } from '../services/vendor-kyc.ts';
 import { setDiscoverable, searchDirectory, onboardVendor } from '../directory/directory.ts';
+import { runMonitorScan } from '../monitor/scan.ts';
 import { requireRole } from '../auth/guard.ts';
 import { AppError, AuthenticationError, AuthorizationError, ValidationError } from '../auth/errors.ts';
 import { isValidGSTIN } from '../verification/validation.ts';
@@ -149,6 +150,16 @@ export async function routeRequest(
         // listPendingAlerts enforces COMPLIANCE-only (403 for VENDOR / BUYER_ADMIN).
         const alerts = await listPendingAlerts(deps.db, claims);
         return send(res, 200, { alerts });
+      }
+
+      // Continuous monitoring — run one scan on demand (the manual "cron tick").
+      // COMPLIANCE/BUYER_ADMIN only; hits the live GST registry for watchlisted
+      // vendors and raises alerts on any status change.
+      if (method === 'POST' && url === '/v1/monitor/scan') {
+        const claims = verifyToken(bearer(req));
+        requireRole(claims, ['COMPLIANCE', 'BUYER_ADMIN']);
+        if (!claims.buyerId) throw new AuthorizationError('No tenant bound to this token');
+        return send(res, 200, await runMonitorScan(deps.db, claims.buyerId));
       }
 
       if (method === 'POST' && url === '/v1/alerts/act') {

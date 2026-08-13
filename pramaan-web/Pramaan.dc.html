@@ -322,7 +322,18 @@
     <sc-if value="{{ isPriyaAlerts }}" hint-placeholder-val="{{ true }}">
       <div data-screen-label="Priya Alerts">
         <h1 style="font-size:24px;font-weight:700;margin:0 0 6px;">Alerts &amp; audit trail</h1>
-        <p style="color:#565f6f;font-size:14px;margin:0 0 22px;max-width:660px;">Big changes always reach you. Small ones — like an address update — are logged quietly and don't interrupt you.</p>
+        <p style="color:#565f6f;font-size:14px;margin:0 0 16px;max-width:660px;">Big changes always reach you. Small ones — like an address update — are logged quietly and don't interrupt you.</p>
+
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 22px;padding:14px 16px;background:#f8f9fb;border:1px solid #eef0f3;border-radius:10px;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-weight:600;font-size:13.5px;">Continuous monitoring</div>
+            <div style="font-size:12px;color:#8890a0;margin-top:2px;">Re-check watchlisted vendors against the live GST registry now.</div>
+          </div>
+          <button onClick="{{ runScan }}" style="{{ scanBtnStyle }}">{{ scanBtnLabel }}</button>
+          <sc-if value="{{ hasScanMsg }}" hint-placeholder-val="{{ false }}">
+            <div style="width:100%;font-size:12.5px;color:{{ scanMsgColor }};font-weight:600;">{{ scanMsg }}</div>
+          </sc-if>
+        </div>
 
         <sc-if value="{{ hasSelectedAlert }}" hint-placeholder-val="{{ false }}">
           <div style="background:#fff;border:2px solid {{ selectedAlert.materialityColor }};border-radius:12px;padding:26px;margin-bottom:24px;">
@@ -740,10 +751,12 @@ async function apiLogin(email, password) {
 // ---- Live data mapping (backend shapes -> prototype seed shapes) ----
 const MSME_LABEL = { MICRO: "Micro Enterprise", SMALL: "Small Enterprise", MEDIUM: "Medium Enterprise", NOT_APPLICABLE: "Not Registered" };
 const CRIT_LABEL = { CRITICAL: "Critical", SIGNIFICANT: "Significant", NON_ESSENTIAL: "Non-essential" };
-const STATE_MAP = { ACTIVE: "verified", UNVERIFIED: "awaiting_consent", SUSPENDED: "retrying", DEREGISTERED: "verified" };
+const STATE_MAP = { ACTIVE: "verified", UNVERIFIED: "awaiting_consent", SUSPENDED: "retrying", DEREGISTERED: "retrying" };
 const ALERT_DESC = {
   BANK_CHANGE: "Bank account changed — payment run affected.",
   GST_SUSPENDED: "GST registration suspended by GSTN — tax credit at risk.",
+  GST_CANCELLED: "GST registration CANCELLED by GSTN — stop payments, input credit lost.",
+  GST_REACTIVATED: "GST registration reactivated — vendor back in good standing.",
   MSME_CLASS_SHIFT: "MSME classification shifted — 43B(h) protection may change.",
   MSME_DUES_43B: "43B(h) MSME dues approaching the 45-day window.",
   ADDRESS_CHANGE: "Registered office address updated."
@@ -832,6 +845,9 @@ class Component extends DCLogic {
     directoryResults: [],
     verifyGst: "",
     verifyResult: null,
+    scanBusy: false,
+    scanMsg: "",
+    scanOk: true,
     dashMsmeFilter: "all",
     dashAttentionOnly: false,
     selectedVendorId: null,
@@ -1027,6 +1043,29 @@ class Component extends DCLogic {
       directoryLabel: this.state.directoryResults.length + " verified vendor(s) available to onboard",
       verifyGst: this.state.verifyGst,
       onVerifyGstChange: (e) => this.setState({ verifyGst: e.target.value }),
+      hasScanMsg: !!this.state.scanMsg,
+      scanMsg: this.state.scanMsg,
+      scanMsgColor: this.state.scanOk ? "#0f7a5c" : "#b3261e",
+      scanBtnLabel: this.state.scanBusy ? "Scanning…" : "Run scan now",
+      scanBtnStyle: "background:" + (this.state.scanBusy ? "#8890a0" : "#12182b") + ";color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:" + (this.state.scanBusy ? "default" : "pointer") + ";font-family:inherit;white-space:nowrap;",
+      runScan: () => {
+        const self = this;
+        if (self.state.scanBusy) return;
+        self.setState({ scanBusy: true, scanMsg: "Checking the live GST registry… this can take a few seconds." , scanOk: true });
+        apiFetch("/v1/monitor/scan", { method: "POST", body: {} }).then(function (r) {
+          if (r.status === 200 && r.data) {
+            const s = r.data;
+            let msg;
+            if (s.alertsRaised > 0) msg = "🚨 " + s.alertsRaised + " status change(s) found — new alert(s) raised. Scanned " + s.scanned + " vendor(s).";
+            else if (s.failed && s.failed.length) msg = "⚠ Registry was busy for " + s.failed.length + " of " + s.scanned + " — try the scan again.";
+            else msg = "✓ Scanned " + s.scanned + " vendor(s). No status changes — all steady.";
+            self.setState({ scanBusy: false, scanMsg: msg, scanOk: s.alertsRaised === 0 && !(s.failed && s.failed.length) ? true : (s.alertsRaised > 0) });
+            loadBuyerData(self);
+          } else {
+            self.setState({ scanBusy: false, scanMsg: (r.data && r.data.error) || "Scan failed — please try again.", scanOk: false });
+          }
+        });
+      },
       verifyLoading: !!(this.state.verifyResult && this.state.verifyResult.loading),
       hasVerifyResult: !!(this.state.verifyResult && !this.state.verifyResult.loading),
       hasVerifyProvider: !!(this.state.verifyResult && this.state.verifyResult.provider),
