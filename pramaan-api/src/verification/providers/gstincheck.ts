@@ -21,53 +21,64 @@ function mapStatus(sts: string): GstStatus | null {
   return null;
 }
 
+async function callOnce(apiKey: string, gstin: string): Promise<GstinResult> {
+  const url =
+    'https://sheet.gstincheck.co.in/check/' +
+    encodeURIComponent(apiKey) +
+    '/' +
+    encodeURIComponent(gstin);
+
+  const res = await fetch(url);
+  const body: any = await res.json().catch(() => ({}));
+  if (!res.ok || body.flag === false || (!body.data && !body.lgnm)) {
+    throw new Error(body && body.message ? String(body.message) : `GSTINCheck HTTP ${res.status}`);
+  }
+
+  const info = body.data || body;
+  return {
+    field: 'gst_number',
+    input: gstin,
+    status: 'VALID',
+    legalName: info.lgnm || info.tradeNam || null,
+    gstStatus: mapStatus(String(info.sts || '')),
+    registrationDate: info.rgdt || null,
+    sourceRegistry: 'GSTN',
+    sourceProvider: 'GSTINCheck',
+    raw: body,
+    verifiedAt: new Date().toISOString(),
+  };
+}
+
+/** Fresh (uncached) GSTINCheck lookup with retries for the flaky free upstream.
+ *  The monitor uses this directly — a periodic re-check must always see live data,
+ *  never a cached earlier answer. Throws if every attempt fails. */
+export async function gstinCheckLookup(apiKey: string, gstin: string): Promise<GstinResult> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await callOnce(apiKey, gstin);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 2) await sleep(700);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('GSTINCheck failed');
+}
+
 export class GstinCheckProvider implements VerificationProvider {
   readonly name = 'GSTINCheck';
-  constructor(private readonly apiKey: string) {}
+  private readonly apiKey: string;
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
 
+  // On-demand verification caches a successful (real) result in memory, so a warm
+  // instance answers repeat manual lookups instantly. Monitoring bypasses this.
   async verifyGSTIN(gstin: string): Promise<GstinResult> {
     const cached = CACHE.get(gstin);
     if (cached) return cached;
-
-    let lastErr: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const result = await this.callOnce(gstin);
-        CACHE.set(gstin, result); // only successful (real) results are cached
-        return result;
-      } catch (e) {
-        lastErr = e;
-        if (attempt < 2) await sleep(700);
-      }
-    }
-    throw lastErr instanceof Error ? lastErr : new Error('GSTINCheck failed');
-  }
-
-  private async callOnce(gstin: string): Promise<GstinResult> {
-    const url =
-      'https://sheet.gstincheck.co.in/check/' +
-      encodeURIComponent(this.apiKey) +
-      '/' +
-      encodeURIComponent(gstin);
-
-    const res = await fetch(url);
-    const body: any = await res.json().catch(() => ({}));
-    if (!res.ok || body.flag === false || (!body.data && !body.lgnm)) {
-      throw new Error(body && body.message ? String(body.message) : `GSTINCheck HTTP ${res.status}`);
-    }
-
-    const info = body.data || body;
-    return {
-      field: 'gst_number',
-      input: gstin,
-      status: 'VALID',
-      legalName: info.lgnm || info.tradeNam || null,
-      gstStatus: mapStatus(String(info.sts || '')),
-      registrationDate: info.rgdt || null,
-      sourceRegistry: 'GSTN',
-      sourceProvider: this.name,
-      raw: body,
-      verifiedAt: new Date().toISOString(),
-    };
+    const result = await gstinCheckLookup(this.apiKey, gstin);
+    CACHE.set(gstin, result);
+    return result;
   }
 }
