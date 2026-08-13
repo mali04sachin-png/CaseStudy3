@@ -11042,6 +11042,47 @@ async function login(db, email, password) {
   return { token: signToken(claims), claims };
 }
 
+// src/services/google-auth.ts
+async function verifyGoogleIdToken(idToken) {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) throw new AuthenticationError("Google sign-in is not configured");
+  const res = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
+  if (!res.ok) throw new AuthenticationError("Google sign-in failed \u2014 please try again");
+  const c = await res.json();
+  if (c.aud !== clientId) throw new AuthenticationError("Google sign-in failed (wrong app)");
+  if (!/accounts\.google\.com$/.test(String(c.iss).replace(/^https?:\/\//, ""))) {
+    throw new AuthenticationError("Google sign-in failed (bad issuer)");
+  }
+  if (Number(c.exp) * 1e3 < Date.now()) throw new AuthenticationError("Google sign-in expired \u2014 try again");
+  if (c.email_verified !== true && c.email_verified !== "true") {
+    throw new AuthenticationError("Your Google email is not verified");
+  }
+  if (!c.email) throw new AuthenticationError("Google did not return an email");
+  return c;
+}
+async function loginWithGoogle(db, idToken) {
+  const g = await verifyGoogleIdToken(idToken);
+  const email = g.email.toLowerCase();
+  const { rows } = await db.query(
+    `select id, email, role, buyer_id, vendor_id, status from users where lower(email) = $1`,
+    [email]
+  );
+  const user = rows[0];
+  if (!user) {
+    throw new AuthenticationError("No Pramaan account for " + g.email + " \u2014 ask an admin to invite you");
+  }
+  await db.query(`update users set sso_subject = $1 where id = $2 and sso_subject is null`, [g.sub, user.id]);
+  const claims = {
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+    // ← from our account, never from Google
+    buyerId: user.buyer_id,
+    vendorId: user.vendor_id
+  };
+  return { token: signToken(claims), claims };
+}
+
 // src/verification/validation.ts
 var GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 var PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -11796,6 +11837,12 @@ async function routeRequest(req, res, deps) {
       if (method === "POST" && url === "/v1/auth/login") {
         const { email, password } = await readJson(req);
         const { token, claims } = await login(deps.db, email, password);
+        return send(res, 200, { token, role: claims.role });
+      }
+      if (method === "POST" && url === "/v1/auth/google") {
+        const { credential } = await readJson(req);
+        if (!credential) throw new ValidationError("Missing Google credential");
+        const { token, claims } = await loginWithGoogle(deps.db, credential);
         return send(res, 200, { token, role: claims.role });
       }
       if (method === "POST" && url === "/v1/vendors/register") {

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <x-dc>
@@ -77,6 +78,14 @@
             </div>
           </sc-if>
           <button onClick="{{ doLogin }}" disabled="{{ loggingIn }}" style="width:100%;background:#12182b;color:#fff;border:none;padding:13px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;opacity:{{ loginButtonOpacity }};">Sign in</button>
+          <sc-if value="{{ googleEnabled }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:12px;margin:18px 0;">
+              <div style="flex:1;height:1px;background:#e2e5ea;"></div>
+              <div style="font-size:11px;color:#8890a0;text-transform:uppercase;letter-spacing:0.05em;">or</div>
+              <div style="flex:1;height:1px;background:#e2e5ea;"></div>
+            </div>
+            <div id="pramaan-gbtn" style="display:flex;justify-content:center;min-height:40px;"></div>
+          </sc-if>
           <div style="display:flex;justify-content:space-between;margin-top:14px;">
             <a href="#" onClick="{{ goToForgot }}" style="font-size:12px;">Forgot password?</a>
             <a href="#" onClick="{{ goToRegister }}" style="font-size:12px;">Don't have an account? Register</a>
@@ -748,6 +757,55 @@ async function apiLogin(email, password) {
   } catch (e) { return { ok: false, error: "Couldn't reach the server. Check your connection." }; }
 }
 
+// ---- Sign in with Google (real users; keeps the demo password login too) ----
+// Set this to your Google OAuth "Client ID" (Web). Until it's a real ID the
+// Google button simply doesn't appear; email/password login is unaffected.
+const GOOGLE_CLIENT_ID = "REPLACE_WITH_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+let APP = null; // live component instance, for the Google callback
+
+async function apiGoogle(credential) {
+  try {
+    const r = await apiFetch("/v1/auth/google", { method: "POST", body: { credential } });
+    if (r.status !== 200 || !r.data || !r.data.token) {
+      return { ok: false, error: (r.data && r.data.error) || ("Google sign-in failed (" + r.status + ")") };
+    }
+    const claims = decodeJwt(r.data.token);
+    AUTH = { token: r.data.token, role: r.data.role || claims.role, email: claims.email, buyerId: claims.buyerId, vendorId: claims.vendorId };
+    return { ok: true, persona: ROLE_TO_PERSONA[AUTH.role] || "priya" };
+  } catch (e) { return { ok: false, error: "Couldn't reach the server." }; }
+}
+
+// Google hands us a signed credential; we exchange it for our own token.
+function onGoogleCredential(response) {
+  if (!APP || !response || !response.credential) return;
+  APP.setState({ loggingIn: true, loginError: "" });
+  apiGoogle(response.credential).then(function (res) {
+    if (!res.ok) { APP.setState({ loggingIn: false, loginError: res.error }); return; }
+    APP.vendors = [];
+    APP.setState({ loggedIn: true, loggingIn: false, persona: res.persona, alerts: [] });
+    loadBuyerData(APP);
+    startPolling(APP);
+  });
+}
+
+// Initialize Google Identity once, then keep the button painted in its slot —
+// the framework re-renders the login DOM, so we re-draw the button if it's wiped.
+let _gisReady = false;
+function pramaanGoogleTick() {
+  if (GOOGLE_CLIENT_ID.indexOf("REPLACE_WITH") === 0) return; // not configured yet
+  if (typeof google === "undefined" || !google.accounts || !google.accounts.id) return;
+  if (!_gisReady) {
+    try { google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential }); _gisReady = true; }
+    catch (e) { return; }
+  }
+  const slot = document.getElementById("pramaan-gbtn");
+  if (slot && slot.childElementCount === 0) {
+    try { google.accounts.id.renderButton(slot, { theme: "outline", size: "large", width: 320, text: "signin_with", shape: "rectangular" }); }
+    catch (e) {}
+  }
+}
+setInterval(pramaanGoogleTick, 400);
+
 // ---- Live data mapping (backend shapes -> prototype seed shapes) ----
 const MSME_LABEL = { MICRO: "Micro Enterprise", SMALL: "Small Enterprise", MEDIUM: "Medium Enterprise", NOT_APPLICABLE: "Not Registered" };
 const CRIT_LABEL = { CRITICAL: "Critical", SIGNIFICANT: "Significant", NON_ESSENTIAL: "Non-essential" };
@@ -979,8 +1037,11 @@ class Component extends DCLogic {
     const roleTileText = (active) => active ? "#fff" : "#12151c";
     const roleTileSub = (active) => active ? "#9aa7c7" : "#8890a0";
 
+    APP = this; // expose the live instance for the Google sign-in callback
+
     return {
       loggedIn: this.state.loggedIn, isLoginScreen: !this.state.loggedIn,
+      googleEnabled: GOOGLE_CLIENT_ID.indexOf("REPLACE_WITH") !== 0,
       isAuthLogin: this.state.authView === "login", isAuthRegister: this.state.authView === "register", isAuthForgot: this.state.authView === "forgot",
       goToLogin: () => this.setState({ authView: "login", loginError: "", forgotSent: false }),
       goToRegister: () => this.setState({ authView: "register" }),

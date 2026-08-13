@@ -7,6 +7,7 @@
 
 import http from 'node:http';
 import { login } from '../services/auth.ts';
+import { loginWithGoogle } from '../services/google-auth.ts';
 import { registerVendor } from '../services/vendors.ts';
 import { inviteComplianceUser } from '../services/invites.ts';
 import { verifyToken } from '../auth/jwt.ts';
@@ -115,6 +116,14 @@ export async function routeRequest(
         const { email, password } = await readJson(req);
         const { token, claims } = await login(deps.db, email, password);
         // We tell the user their role; we never asked them to pick it.
+        return send(res, 200, { token, role: claims.role });
+      }
+
+      // "Sign in with Google" — verify the Google token, issue our own token.
+      if (method === 'POST' && url === '/v1/auth/google') {
+        const { credential } = await readJson(req);
+        if (!credential) throw new ValidationError('Missing Google credential');
+        const { token, claims } = await loginWithGoogle(deps.db, credential);
         return send(res, 200, { token, role: claims.role });
       }
 
